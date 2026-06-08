@@ -1,7 +1,7 @@
 {
   "userName": "",
   "permissionMode": "yolo",
-  "model": "haiku",
+  "model": "sonnet",
   "thinkingBudget": "off",
   "effortLevel": "high",
   "serviceTier": "default",
@@ -33,7 +33,7 @@
       "enableOpus1M": false,
       "enableSonnet1M": false,
       "customModels": "",
-      "lastModel": "haiku",
+      "lastModel": "sonnet",
       "environmentVariables": "",
       "environmentHash": ""
     },
@@ -80,7 +80,7 @@
   },
   "settingsProvider": "claude",
   "savedProviderModel": {
-    "claude": "haiku"
+    "claude": "sonnet"
   },
   "savedProviderEffort": {
     "claude": "high"
