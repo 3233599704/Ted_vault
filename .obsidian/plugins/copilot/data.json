@@ -1,6 +1,6 @@
 {
   "userId": "afc5f27a-8abd-4efb-a8e4-1de28d87a2f1",
-  "isPlusUser": true,
+  "isPlusUser": false,
   "plusLicenseKey": "AIzaSyCe4lig3cwn-W_bQTkvxtmbhyOOEcBdljU",
   "openAIApiKey": "",
   "openAIOrgId": "",
@@ -24,7 +24,7 @@
   "githubCopilotToken": "",
   "githubCopilotTokenExpiresAt": 0,
   "defaultChainType": "copilot_plus",
-  "defaultModelKey": "copilot-plus-flash|copilot-plus",
+  "defaultModelKey": "gemini-2.5-flash|google",
   "embeddingModelKey": "copilot-plus-small|copilot-plus",
   "temperature": 0.1,
   "maxTokens": 6000,
