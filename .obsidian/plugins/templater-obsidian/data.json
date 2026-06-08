@@ -1,0 +1,45 @@
+{
+  "command_timeout": 5,
+  "templates_folder": "多物理场仿真/templates",
+  "templates_pairs": [
+    ["tp-raw", "多物理场仿真/templates/tp-raw.md"],
+    ["tp-inbox", "多物理场仿真/templates/tp-inbox.md"],
+    ["tp-wiki", "多物理场仿真/templates/tp-wiki.md"],
+    ["tp-每日蒸馏", "多物理场仿真/templates/tp-每日蒸馏.md"]
+  ],
+  "trigger_on_file_creation": true,
+  "auto_jump_to_cursor": true,
+  "enable_system_commands": false,
+  "shell_path": "/bin/bash",
+  "user_scripts_folder": "多物理场仿真/templates/scripts",
+  "enable_folder_templates": true,
+  "folder_templates": [
+    {
+      "folder": "多物理场仿真/raw",
+      "template": "多物理场仿真/templates/tp-raw.md"
+    },
+    {
+      "folder": "多物理场仿真/inbox",
+      "template": "多物理场仿真/templates/tp-inbox.md"
+    },
+    {
+      "folder": "多物理场仿真/wiki",
+      "template": "多物理场仿真/templates/tp-wiki.md"
+    },
+    {
+      "folder": "多物理场仿真/每日蒸馏",
+      "template": "多物理场仿真/templates/tp-每日蒸馏.md"
+    }
+  ],
+  "enable_file_templates": false,
+  "syntax_highlighting": true,
+  "syntax_highlighting_mobile": false,
+  "enabled_templates_hotkeys": [
+    "tp-raw",
+    "tp-inbox",
+    "tp-wiki",
+    "tp-每日蒸馏"
+  ],
+  "startup_templates": [],
+  "enable_ribbon_icon": true
+}
