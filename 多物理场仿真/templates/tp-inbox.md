@@ -2,7 +2,7 @@
 title: "{% tp.system.prompt('摘要标题（默认用源文件名）', '') %} — 摘要"
 tags:
   - inbox
-  - "{% tp.system.suggester(['电磁仿真', '热仿真', '光仿真', 'EDA', '软件操作', '小白问答'], ['电磁仿真', '热仿真', '光仿真', 'EDA', '软件操作', '小白问答']) %}"
+  - "{% tp.system.suggester(['电磁仿真', '热仿真', '光仿真', 'EDA', '模型训练', '软件操作', '小白问答'], ['电磁仿真', '热仿真', '光仿真', 'EDA', '模型训练', '软件操作', '小白问答']) %}"
 source: "{% tp.system.prompt('链接到 raw 源文件（如 [[raw/EDA/xxx.pdf]]）', '') %}"
 created: "{% tp.date.now('YYYY-MM-DD') %}"
 status: draft
