@@ -1,0 +1,23 @@
+{
+  "version": "v2_optimized",
+  "improvements": [
+    "Resonance-aware multi-task loss (MSE + freq + depth)",
+    "Adaptive PCA dim selection (99.9% variance)",
+    "Cosine annealing LR with warm restarts",
+    "Gradient clipping",
+    "Richer S11 features for inverse (10 handcrafted)",
+    "Dynamic tandem weight scheduling",
+    "Residual connections (moderate width: 128)",
+    "Proper train/holdout split (no data leakage)"
+  ],
+  "forward_v2": {
+    "cv_mae_mean": 1.0006322264671326,
+    "cv_mae_std": 0.0818000619649186,
+    "cv_freq_err_mean_MHz": 537.6068104761905,
+    "cv_freq_err_std_MHz": 219.87650097354575,
+    "cv_depth_err_mean_dB": 3.4867138862609863,
+    "final_mae_mean": 0.7346886992454529,
+    "final_mae_median": 0.6712937355041504,
+    "final_freq_err_mean_MHz": 668.0911388888888,
+    "final_depth_err_mean_dB": 1.7468901872634888,
+    "pca_dim": 
