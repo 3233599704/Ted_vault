@@ -24,8 +24,8 @@ status: draft
 ## 👀 WavEDA 建模
 
 在 WavEDA Layout 里建了微带贴片天线结构，然后在 EM 模块里做了双参数扫参。出来的 Touchstone 文件转成了 `Backfeed_Data300` 同款的 Excel 格式，这样才能复用之前的训练 pipeline。
+![[a24050df31ee7a915e6c59a84ab9d9f4.png]]
 
-![[多物理场仿真/raw/模型训练/6_10文件/waveda仿真建模/0faee048d1dcdbc701bef0ce2f85054a.png]]
 
 ## 🧠 正向模型（l3, w4 → S11 曲线）
 
