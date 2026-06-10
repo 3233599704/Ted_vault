@@ -7,7 +7,7 @@ tags:
   - 软件
 source: "[[raw/EDA/WavEDA EM-Multiphysics-V2.0_20260319.pdf]]"
 created: 2026-06-08
-status: draft
+status: reviewed
 ---
 
 # WavEDA EM-Multiphysics V2.0 — 摘要
@@ -53,4 +53,4 @@ status: draft
 
 - [ ] 精炼为 wiki 页面：[[wiki/软件操作/WavEDA/WavEDA 索引]] — 作为了解公司产品体系的入口
 - [ ] 更新 [[wiki/软件操作/索引]]，把 WavEDA 加入软件清单
-- [ ] 关联已有页面：[[wiki/EDA/索引]]、[[wiki/电磁仿真/有限元法 FEM]]
+- [x] 关联已有页面：[[wiki/EDA/索引]]、[[wiki/电磁仿真/有限元法 FEM]]

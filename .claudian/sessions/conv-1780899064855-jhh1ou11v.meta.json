@@ -4,20 +4,20 @@
   "title": "Evaluate Codex introduction writing",
   "titleGenerationStatus": "success",
   "createdAt": 1780899064858,
-  "updatedAt": 1781089837162,
-  "lastResponseAt": 1781089837162,
+  "updatedAt": 1781090193396,
+  "lastResponseAt": 1781090193396,
   "sessionId": "e3bf6932-a90b-453d-8322-71f045226c12",
   "providerState": {
     "providerSessionId": "e3bf6932-a90b-453d-8322-71f045226c12"
   },
   "usage": {
     "model": "sonnet",
-    "inputTokens": 1378,
+    "inputTokens": 984,
     "cacheCreationInputTokens": 0,
-    "cacheReadInputTokens": 141824,
+    "cacheReadInputTokens": 146048,
     "contextWindow": 1000000,
-    "contextTokens": 143202,
-    "percentage": 14,
+    "contextTokens": 147032,
+    "percentage": 15,
     "contextWindowIsAuthoritative": true
   }
 }
