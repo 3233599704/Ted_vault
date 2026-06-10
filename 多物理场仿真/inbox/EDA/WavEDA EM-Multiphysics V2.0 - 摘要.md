@@ -97,7 +97,7 @@ WavEDA（芯和半导体）是国内 EDA 厂商，主打**多物理场仿真平�
 
 ## 📁 后续动作
 
-- [ ] 精炼为 wiki 页面：[[wiki/软件操作/WavEDA/WavEDA 索引]]
+- [x] 精炼为 wiki 页面：[[wiki/软件操作/WavEDA/WavEDA 索引]]
 - [ ] 更新 [[wiki/软件操作/索引]]，把 WavEDA 加入软件清单
-- [ ] 关联已有页面：[[wiki/EDA/索引]]、[[wiki/电磁仿真/有限元法 FEM]]、[[wiki/热仿真/热传导基础]]
-- [ ] DDM 和 MFEM-fast 可以写专门的 wiki 页
+- [x] 关联已有页面：[[wiki/EDA/索引]]、[[wiki/电磁仿真/有限元法 FEM]]、[[wiki/热仿真/热传导基础]]
+- [x] DDM 和 MFEM-fast 可以写专门的 wiki 页
