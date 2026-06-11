@@ -146,7 +146,7 @@ status: growing
 
 ---
 
-## 第四阶段：一键 Pipeline
+## 第五阶段：一键 Pipeline
 
 将完整流程封装为 `run_s11_pipeline.py`，位于 `d:/vscode_projects/notebook/`。
 
@@ -165,6 +165,55 @@ python run_s11_pipeline.py data.txt
 
 ---
 
+## 第四阶段：Loss 函数对比实验
+
+在线性域 baseline（MAE 0.10 dB，L2 Loss）基础上，保持架构不变，**仅替换 Loss 函数**——5 折交叉验证对比 7 种 Loss。
+
+### 结果
+
+| Loss | MAE (dB) | FreqErr (MHz) | DepthErr (dB) | vs L2 Baseline |
+|:---|---:|---:|---:|:---|
+| L2 (MSE) | 0.1583 | 28 | 0.91 | baseline |
+| L1 (MAE) | 0.1499 | 28 | 0.92 | **-5.3%** |
+| SmoothL1 | 0.1508 | 29 | 0.89 | -4.8% |
+| **MAPE** | **0.1491** | **24** | **0.84** | **-5.8% 🏆** |
+| Huber | 0.1623 | 22 | 0.96 | ❌ +2.5% |
+| LogCosh | 0.1634 | 33 | 0.98 | ❌ +3.2% |
+| Weighted L2 | 0.1582 | 31 | 0.88 | ≈ 无用 |
+
+![[多物理场仿真/raw/模型训练/obsidian_2026-06-11/loss_benchmark.png]]
+
+*7 种 Loss 函数对比：左=曲线 MAE，右=频率/谷底误差*
+
+### 各 Loss 一句话
+
+| Loss | 直觉 | 线性域下表现 |
+|:---|:---|:---|
+| **L2 (MSE)** | 平方误差，大错罚爆 | 稳定，但被 MAPE 超越 |
+| **L1 (MAE)** | 绝对值，一视同仁 | 比 L2 好 ~5%，简单有效 |
+| **MAPE** | 相对百分比误差 | 🏆 最优——深谷线性值小，天然被重视 |
+| **SmoothL1** | L1+L2 缝合 | 略逊 L1 |
+| **Huber** | 手动版 SmoothL1 | ❌ 把深谷信号当"异常值"压了 |
+| **LogCosh** | 自动版 Huber | ❌ 同 Huber 问题 |
+| **Weighted L2** | dB 域遗产 | ≈ 无用——线性域已自带加权 |
+
+### 为什么 MAPE 赢了
+
+MAPE 计算的是 **相对误差**：`|pred - true| / |true|`。深谷处线性值只有 ~0.02，1% 的偏差就是 10% 的相对误差——MAPE 天然给深谷极高权重。效果等价于在 dB 域手工设计加权 L2，但**更优雅且无需调参**。
+
+Huber/LogCosh 反而是反效果：它们的设计哲学是把大误差当"异常值"压低，但线性域下的"大误差"恰恰是深谷的正确物理信号。
+
+### 结论
+
+```
+线性域 + MAPE Loss > 线性域 + L2 > dB 域 + 加权 L2
+    最优                        基线              过时方案
+```
+
+> **以后的默认配置：`--linear` + MAPE Loss。**
+
+---
+
 ## 🏆 最终最佳实践
 
 基于三阶段实验的收敛结论：
@@ -172,6 +221,7 @@ python run_s11_pipeline.py data.txt
 | 推荐 | 不推荐 |
 |:---|:---|
 | ✅ 线性域训练（`--linear`） | ❌ dB 域 + 手动加权 Loss |
+| ✅ MAPE Loss（线性域默认） | ❌ Huber/LogCosh（把深谷当异常值压了） |
 | ✅ 模型集成（3-5 seed） | ❌ CNN Decoder（输出点 < 100 时） |
 | ✅ 加密参数网格（多跑仿真） | ❌ Freq-Aware Loss（线性域已自带） |
 | ✅ PCA 压缩（解释率 ≥ 99.9%） | ❌ 更宽网络 + 残差（小样本过拟合） |
