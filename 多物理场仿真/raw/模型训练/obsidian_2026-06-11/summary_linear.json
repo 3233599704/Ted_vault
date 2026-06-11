@@ -1,0 +1,31 @@
+{
+  "input_file": "d:/vscode_projects/notebook/Port_S_data_三个参数.txt",
+  "params": [
+    "l3",
+    "w4",
+    "h"
+  ],
+  "n_samples": 576,
+  "n_freq_points": 40,
+  "freq_range": "1.0000-3.0000 GHz",
+  "forward": {
+    "cv_mae_mean": 0.15851266086101531,
+    "cv_mae_std": 0.008238073789843795,
+    "cv_freq_err_mean_MHz": 28.338920839580215,
+    "final_mae_mean": 0.10342918336391449,
+    "final_mae_median": 0.09011538326740265,
+    "final_freq_err_median_MHz": 0.0,
+    "pca_dim": 35,
+    "pca_var": 1.0
+  },
+  "inverse": {
+    "cv_param_mae_mean": 0.06527452170848846,
+    "cv_param_mae_std": 0.009443603456020355,
+    "final_param_mae": {
+      "l3": 0.04358125850558281,
+      "w4": 0.01713692955672741,
+      "h": 0.003149406984448433
+    },
+    "final_rec_mae_mean_dB": 0.10649103671312332
+  }
+}

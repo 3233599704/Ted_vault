@@ -1,0 +1,51 @@
+{
+  "data": {
+    "file": "Port_S_data_三个参数.txt",
+    "samples": 576,
+    "freq_range": "1.0000-3.0000 GHz",
+    "freq_points": 40,
+    "params": [
+      "l3",
+      "w4",
+      "h"
+    ],
+    "l3": [
+      9.0,
+      17.0
+    ],
+    "w4": [
+      0.5,
+      4.0
+    ],
+    "h": [
+      0.5,
+      1.2
+    ]
+  },
+  "forward": {
+    "cv_mae_mean": 0.18974704444408416,
+    "cv_mae_std": 0.01832068917846919,
+    "cv_freq_err_mean_MHz": 34.581188515742134,
+    "cv_depth_err_mean_dB": 0.9142311096191407,
+    "final_mae_mean": 0.27389171719551086,
+    "final_mae_median": 0.2567639946937561,
+    "final_freq_err_mean_MHz": 47.80985069444446,
+    "final_freq_err_median_MHz": 0.0,
+    "pca_dim": 35,
+    "pca_var": 1.0,
+    "best_epoch": 4952
+  },
+  "inverse": {
+    "cv_param_mae_mean": 0.0721365213394165,
+    "cv_param_mae_std": 0.008010578341782093,
+    "cv_curve_mae_mean_dB": 0.0721365213394165,
+    "final_param_mae": {
+      "l3": 0.04118175059556961,
+      "w4": 0.020709196105599403,
+      "h": 0.0032545144204050303
+    },
+    "final_rec_mae_mean_dB": 0.2742830812931061,
+    "final_rec_mae_median_dB": 0.25663724541664124,
+    "best_epoch": 4952
+  }
+}
