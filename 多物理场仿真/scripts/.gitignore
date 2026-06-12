@@ -1,3 +1,5 @@
 .feishu-claude-bot.lock
+.feishu-claude-sessions.json
+.feishu-claude-sessions.json.tmp
 feishu-bot.stdout.log
 feishu-bot.stderr.log

@@ -49,6 +49,7 @@ MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "120"))
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "feishu-bot.log")
 LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
+SESSION_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-sessions.json")
 
 # ============================================================
 # 日志
@@ -123,47 +124,111 @@ def find_claude_command() -> list[str]:
 
 CLAUDE_COMMAND: list[str] = []
 CLAUDE_RUN_LOCK = threading.Lock()
+SESSION_LOCK = threading.Lock()
 
 # 消息去重（飞书可能对同一消息推送多次）
 SEEN_MESSAGES = set()
 MAX_SEEN = 200  # 防止无限增长
 # ============================================================
 
-def run_claude(prompt: str) -> str:
+
+def load_sessions() -> dict[str, str]:
+    with SESSION_LOCK:
+        try:
+            with open(SESSION_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return {}
+    return {
+        str(user_id): str(session_id)
+        for user_id, session_id in data.items()
+        if user_id and session_id
+    }
+
+
+def save_sessions(sessions: dict[str, str]) -> None:
+    temp_file = SESSION_FILE + ".tmp"
+    with SESSION_LOCK:
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(sessions, f, ensure_ascii=False, indent=2)
+        os.replace(temp_file, SESSION_FILE)
+
+
+SESSIONS = load_sessions()
+
+
+def reset_session(sender_id: str) -> None:
+    SESSIONS.pop(sender_id, None)
+    save_sessions(SESSIONS)
+
+
+def invoke_claude(prompt: str, session_id: str | None) -> subprocess.CompletedProcess:
+    system_prompt = (
+        "你是通过飞书操作本机 Obsidian Vault 的助手。当前工作目录就是 Vault 根目录。"
+        "优先用 Read、Glob、Grep、Edit、Write 工具完成用户请求。"
+        "只操作当前 Vault 内的文件，不执行破坏性操作；修改后用中文简要说明结果。"
+        "这是连续会话，请结合此前对话理解代词、追问和用户未重复说明的上下文。"
+    )
+    command = [
+        *CLAUDE_COMMAND,
+        "--print",
+        "--output-format", "json",
+        "--permission-mode", CLAUDE_PERMISSION_MODE,
+        "--allowed-tools", "Read,Glob,Grep,Edit,Write",
+        "--append-system-prompt", system_prompt,
+    ]
+    if session_id:
+        command.extend(["--resume", session_id])
+    command.append(prompt)
+
+    return subprocess.run(
+        command,
+        cwd=VAULT_PATH,
+        capture_output=True,
+        text=True,
+        timeout=MAX_CLAUDE_SECONDS,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+
+def run_claude(sender_id: str, prompt: str) -> str:
     try:
-        system_prompt = (
-            "你是通过飞书操作本机 Obsidian Vault 的助手。当前工作目录就是 Vault 根目录。"
-            "优先用 Read、Glob、Grep、Edit、Write 工具完成用户请求。"
-            "只操作当前 Vault 内的文件，不执行破坏性操作；修改后用中文简要说明结果。"
-        )
-        command = [
-            *CLAUDE_COMMAND,
-            "--print",
-            "--no-session-persistence",
-            "--permission-mode", CLAUDE_PERMISSION_MODE,
-            "--allowed-tools", "Read,Glob,Grep,Edit,Write",
-            "--append-system-prompt", system_prompt,
-            prompt,
-        ]
         with CLAUDE_RUN_LOCK:
-            result = subprocess.run(
-                command,
-                cwd=VAULT_PATH,
-                capture_output=True,
-                text=True,
-                timeout=MAX_CLAUDE_SECONDS,
-                encoding="utf-8",
-                errors="replace",
-            )
+            session_id = SESSIONS.get(sender_id)
+            result = invoke_claude(prompt, session_id)
+
+            # A Claude update or deleted local history can invalidate a session.
+            # Retry once as a fresh conversation instead of breaking the bot.
+            if result.returncode != 0 and session_id:
+                error = result.stderr.strip() or result.stdout.strip()
+                log(f"会话恢复失败，自动新建会话: {error[:300]}")
+                reset_session(sender_id)
+                result = invoke_claude(prompt, None)
+
         if result.returncode != 0:
             error = result.stderr.strip() or result.stdout.strip()
             log(f"Claude 调用失败: exit={result.returncode}, {error[:500]}")
             return f"Claude 调用失败（退出码 {result.returncode}）：\n{error[:500]}"
-        out = result.stdout.strip()
+
+        try:
+            response = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            log(f"Claude JSON 响应解析失败: {result.stdout[:500]}")
+            return result.stdout.strip() or "(Claude returned empty response)"
+
+        new_session_id = response.get("session_id")
+        if new_session_id and SESSIONS.get(sender_id) != new_session_id:
+            SESSIONS[sender_id] = new_session_id
+            save_sessions(SESSIONS)
+            log(f"已保存连续会话: {sender_id[-8:]} / {new_session_id[:8]}")
+
+        out = str(response.get("result", "")).strip()
         if not out:
-            if result.stderr.strip():
-                log(f"Claude 无输出: {result.stderr[:500]}")
-                return f"(Claude stdout empty, stderr: {result.stderr[:300]})"
+            error = response.get("error") or result.stderr.strip()
+            if error:
+                log(f"Claude 无输出: {str(error)[:500]}")
+                return f"Claude 无输出：{str(error)[:300]}"
             return "(Claude returned empty response)"
         return out
     except subprocess.TimeoutExpired:
@@ -220,8 +285,12 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
             log(f"⛔ 非白名单用户: {sender_id}")
             return
 
-        # 调 Claude
-        reply = run_claude(user_text)
+        if user_text.lower() in {"/new", "/reset"} or user_text == "新会话":
+            reset_session(sender_id)
+            reply = "已开启新会话。下一条消息将不再使用之前的聊天上下文。"
+        else:
+            # 调 Claude
+            reply = run_claude(sender_id, user_text)
         reply = clean_reply(reply)
         log(f"🤖 → {reply[:80]}")
 
