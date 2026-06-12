@@ -13,10 +13,15 @@
 """
 
 import os
+import sys
 import re
 import json
 import subprocess
 from datetime import datetime
+
+# Windows 控制台 UTF-8
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import lark_oapi as lark
 from lark_oapi.api.im.v1 import (
@@ -28,8 +33,8 @@ from lark_oapi.api.im.v1 import (
 # 配置区
 # ============================================================
 
-APP_ID = os.environ.get("FEISHU_APP_ID", "你的App ID")
-APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "你的App Secret")
+APP_ID = os.environ.get("FEISHU_APP_ID", "cli_aaa1df5bc2385bcb")
+APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "1xC0wBdmrgU6wxTwRFPPre4DstFoqqVT")
 
 # 白名单：只有这些 open_id 能触发 AI（留空 = 允许所有人）
 ALLOWED_USERS = [
@@ -171,8 +176,8 @@ def main():
         log_level=lark.LogLevel.INFO,
     )
 
-    log("🚀 飞书 Bot 启动，长连接已建立，等待消息…")
-    print("✅ 已连接。手机飞书发消息即可对话，Ctrl+C 停止\n")
+    log("[OK] Feishu Bot started, waiting for messages...")
+    print("[OK] Connected. Send message from Feishu app. Ctrl+C to stop")
     cli.start()
 
 
