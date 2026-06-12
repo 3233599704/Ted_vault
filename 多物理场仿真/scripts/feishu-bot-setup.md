@@ -89,7 +89,21 @@ py feishu-claude-bot.py
 
 ---
 
-## 📱 第五步：手机上用
+## 📋 第五步：开机自启
+
+Windows 计划任务 `FeishuClaudeBot` 会在用户登录后隐藏运行：
+
+```powershell
+Start-ScheduledTask -TaskName "FeishuClaudeBot"
+Stop-ScheduledTask -TaskName "FeishuClaudeBot"
+```
+
+Bot 有单实例保护，重复启动不会产生多个连接。计划任务只保存脚本路径，
+飞书凭证仍从 Windows 用户环境变量读取。
+
+---
+
+## 📱 第六步：手机上用
 
 1. 打开飞书 App
 2. 搜索你的应用名称 → 点进去
