@@ -16,6 +16,7 @@ import os
 import sys
 import re
 import json
+import hashlib
 import shutil
 import subprocess
 import threading
@@ -31,7 +32,7 @@ import lark_oapi as lark
 from lark_oapi.api.im.v1 import (
     ReplyMessageRequest, ReplyMessageRequestBody,
     CreateMessageRequest, CreateMessageRequestBody,
-    GetImageRequest,
+    GetMessageResourceRequest,
 )
 
 # ============================================================
@@ -260,6 +261,45 @@ def clean_reply(text: str, max_chars: int = 3000) -> str:
         text = text[:max_chars] + "\n\n…（已截断）"
     return text
 
+
+def reply_text_message(msg_id: str, text: str) -> bool:
+    body = ReplyMessageRequestBody.builder() \
+        .content(json.dumps({"text": text})) \
+        .msg_type("text") \
+        .build()
+    req = ReplyMessageRequest.builder() \
+        .message_id(msg_id) \
+        .request_body(body) \
+        .build()
+    resp = lark.Client.builder() \
+        .app_id(APP_ID) \
+        .app_secret(APP_SECRET) \
+        .build() \
+        .im.v1.message.reply(req)
+    if not resp.success():
+        log(f"❌ 回复失败: code={resp.code}, msg={resp.msg}")
+        return False
+    log("✅ 回复成功")
+    return True
+
+
+def detect_image_extension(raw_bytes: bytes, fallback_name: str = "") -> str:
+    if raw_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if raw_bytes.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if raw_bytes.startswith((b"GIF87a", b"GIF89a")):
+        return ".gif"
+    if raw_bytes.startswith(b"BM"):
+        return ".bmp"
+    if raw_bytes.startswith(b"RIFF") and raw_bytes[8:12] == b"WEBP":
+        return ".webp"
+
+    extension = os.path.splitext(fallback_name)[1].lower()
+    if extension in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}:
+        return extension
+    return ".png"
+
 # ============================================================
 # 消息处理（官方 EventDispatcherHandler 模式）
 # ============================================================
@@ -283,27 +323,7 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
             reply = run_claude(sender_id, user_text)
         reply = clean_reply(reply)
         log(f"🤖 → {reply[:80]}")
-
-        # 回复
-        body = ReplyMessageRequestBody.builder() \
-            .content(json.dumps({"text": reply})) \
-            .msg_type("text") \
-            .build()
-        req = ReplyMessageRequest.builder() \
-            .message_id(msg_id) \
-            .request_body(body) \
-            .build()
-
-        resp = lark.Client.builder() \
-            .app_id(APP_ID) \
-            .app_secret(APP_SECRET) \
-            .build() \
-            .im.v1.message.reply(req)
-
-        if resp.success():
-            log("✅ 回复成功")
-        else:
-            log(f"❌ 回复失败: code={resp.code}, msg={resp.msg}")
+        reply_text_message(msg_id, reply)
 
     except json.JSONDecodeError:
         log("消息 JSON 解析失败，跳过")
@@ -312,20 +332,32 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
 
 
 def handle_image_message(sender_id: str, msg_id: str, image_key: str) -> None:
-    """Download image from Feishu and save to vault raw/图片/."""
+    """Download a Feishu message image, then ask Claude to analyze it."""
     try:
         log(f"🖼️ {sender_id[-8:]}: 收到图片 {image_key[-16:]}")
 
-        # Download image via Feishu API
-        req = GetImageRequest.builder().image_key(image_key).build()
+        if ALLOWED_USERS and sender_id not in ALLOWED_USERS:
+            log(f"⛔ 非白名单用户: {sender_id}")
+            return
+
+        # Images received in messages use the message-resource endpoint.
+        req = GetMessageResourceRequest.builder() \
+            .message_id(msg_id) \
+            .file_key(image_key) \
+            .type("image") \
+            .build()
         resp = lark.Client.builder() \
             .app_id(APP_ID) \
             .app_secret(APP_SECRET) \
             .build() \
-            .im.v1.image.get(req)
+            .im.v1.message_resource.get(req)
 
         if not resp.success():
             log(f"下载图片失败: code={resp.code}, msg={resp.msg}")
+            reply_text_message(
+                msg_id,
+                f"图片下载失败：{resp.msg or resp.code}。请检查飞书应用的消息资源权限。",
+            )
             return
 
         # Get raw bytes from response
@@ -338,14 +370,15 @@ def handle_image_message(sender_id: str, msg_id: str, image_key: str) -> None:
 
         if not raw_bytes:
             log("图片响应中无文件数据")
+            reply_text_message(msg_id, "图片下载成功，但响应中没有可读取的图片数据。")
             return
 
-        # Determine file extension and name
-        fname = getattr(resp, "file_name", None) or f"{image_key}.png"
-        if not fname.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")):
-            fname += ".png"
+        response_name = getattr(resp, "file_name", None) or ""
+        extension = detect_image_extension(raw_bytes, response_name)
+        image_hash = hashlib.sha256(image_key.encode("utf-8")).hexdigest()[:8]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fname = f"feishu_{timestamp}_{image_hash}{extension}"
 
-        # Ensure save directory exists
         os.makedirs(IMAGE_SAVE_DIR, exist_ok=True)
         save_path = os.path.join(IMAGE_SAVE_DIR, fname)
 
@@ -354,25 +387,26 @@ def handle_image_message(sender_id: str, msg_id: str, image_key: str) -> None:
 
         log(f"💾 图片已保存: {save_path} ({len(raw_bytes)} bytes)")
 
-        # Reply to user
+        relative_path = os.path.relpath(save_path, VAULT_PATH).replace("\\", "/")
+        prompt = (
+            f"用户刚刚在飞书发送了一张图片，已保存到 `{relative_path}`。"
+            "请使用 Read 工具读取并分析这张图片。用中文说明："
+            "1. 图片的主要内容；2. 可识别的文字或关键数据；"
+            "3. 值得记录到 Obsidian 的信息。"
+            "不要声称看不到图片。如果图片模糊或信息不确定，请明确指出。"
+        )
+        analysis = clean_reply(run_claude(sender_id, prompt))
         size_kb = len(raw_bytes) / 1024
-        reply = f"图片已保存到 raw/图片/{fname} ({size_kb:.1f} KB)"
-        body = ReplyMessageRequestBody.builder() \
-            .content(json.dumps({"text": reply})) \
-            .msg_type("text") \
-            .build()
-        reply_req = ReplyMessageRequest.builder() \
-            .message_id(msg_id) \
-            .request_body(body) \
-            .build()
-        lark.Client.builder() \
-            .app_id(APP_ID) \
-            .app_secret(APP_SECRET) \
-            .build() \
-            .im.v1.message.reply(reply_req)
+        reply = (
+            f"图片已保存到 `{relative_path}`（{size_kb:.1f} KB）\n\n"
+            f"{analysis}"
+        )
+        log(f"🧠 图片分析 → {analysis[:80]}")
+        reply_text_message(msg_id, clean_reply(reply))
 
     except Exception as e:
         log(f"图片处理异常: {type(e).__name__}: {e}")
+        reply_text_message(msg_id, f"图片处理失败：{type(e).__name__}: {e}")
 
 
 def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
@@ -393,11 +427,12 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
             content = json.loads(msg.content)
             image_key = content.get("image_key", "")
             if image_key:
-                threading.Thread(
-                    target=handle_image_message,
-                    args=(sender_id, msg_id, image_key),
-                    daemon=True,
-                ).start()
+                MESSAGE_EXECUTOR.submit(
+                    handle_image_message,
+                    sender_id,
+                    msg_id,
+                    image_key,
+                )
             else:
                 log("图片消息中无 image_key，跳过")
             return
