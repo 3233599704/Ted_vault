@@ -66,12 +66,15 @@ def log(msg: str):
 
 def run_claude(prompt: str) -> str:
     try:
+        # shell=True 确保 Windows 能找到 node 和 claude.cmd 的完整依赖链
+        safe_prompt = prompt.replace('"', "'")
         result = subprocess.run(
-            [CLAUDE_CMD, "--print", prompt],
+            f'"{CLAUDE_CMD}" --print "{safe_prompt}"',
             cwd=VAULT_PATH,
             capture_output=True, text=True,
             timeout=MAX_CLAUDE_SECONDS,
             encoding="utf-8", errors="replace",
+            shell=True,
         )
         out = result.stdout.strip()
         if not out:
