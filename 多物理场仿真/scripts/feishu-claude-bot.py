@@ -19,6 +19,7 @@ import json
 import shutil
 import subprocess
 import threading
+import time as _time_module
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -28,7 +29,8 @@ if sys.platform == "win32":
 
 import lark_oapi as lark
 from lark_oapi.api.im.v1 import (
-    ReplyMessageRequest, ReplyMessageRequestBody
+    ReplyMessageRequest, ReplyMessageRequestBody,
+    CreateMessageRequest, CreateMessageRequestBody,
 )
 
 # ============================================================
@@ -342,6 +344,134 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         log(f"接收消息异常: {type(e).__name__}: {e}")
 
 # ============================================================
+# 每日蒸馏 Watchdog — 检测 Codex 自动化完成并主动通知
+# ============================================================
+
+WATCH_DISTILL_DIR = os.path.join(VAULT_PATH, "多物理场仿真", "每日蒸馏")
+DISTILL_NOTIFIED_FILE = os.path.join(SCRIPT_DIR, ".feishu-distill-notified.json")
+
+
+def _load_distill_notified() -> set[str]:
+    try:
+        with open(DISTILL_NOTIFIED_FILE, "r", encoding="utf-8") as f:
+            return set(json.load(f))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return set()
+
+
+def _save_distill_notified(notified: set[str]) -> None:
+    temp = DISTILL_NOTIFIED_FILE + ".tmp"
+    with open(temp, "w", encoding="utf-8") as f:
+        json.dump(sorted(notified), f)
+    os.replace(temp, DISTILL_NOTIFIED_FILE)
+
+
+def _send_proactive_msg(open_id: str, text: str) -> None:
+    """Send a direct message (not a reply) to a user via Feishu API."""
+    try:
+        body = CreateMessageRequestBody.builder() \
+            .receive_id(open_id) \
+            .msg_type("text") \
+            .content(json.dumps({"text": text})) \
+            .build()
+        req = CreateMessageRequest.builder() \
+            .receive_id_type("open_id") \
+            .request_body(body) \
+            .build()
+        resp = lark.Client.builder() \
+            .app_id(APP_ID) \
+            .app_secret(APP_SECRET) \
+            .build() \
+            .im.v1.message.create(req)
+        if not resp.success():
+            log(f"[Watchdog] 通知失败 {open_id[-8:]}: code={resp.code}")
+    except Exception as e:
+        log(f"[Watchdog] 通知异常: {e}")
+
+
+def _summarize_daily_report(report_path: str, fname: str) -> str:
+    """Extract key info from daily distill report for a push notification."""
+    date_str = fname.replace(".md", "")
+    try:
+        with open(report_path, "r", encoding="utf-8") as f:
+            text = f.read()
+
+        new_count = text.count("✅")
+        pending_high = text.count("🔴")
+        pending_warn = text.count("⚠️")
+        pending_total = pending_high + pending_warn
+
+        lines = [
+            f"🥃 每日蒸馏完成 — {date_str}",
+            "",
+        ]
+        if new_count:
+            lines.append(f"📥 今日处理: {new_count} 个新文件")
+        else:
+            lines.append("📥 今日无新文件")
+        if pending_total:
+            lines.append(f"📋 待你审阅: {pending_total} 篇 inbox 摘要")
+            if pending_high:
+                lines.append(f"   🔴 {pending_high} 篇超过 7 天")
+            if pending_warn:
+                lines.append(f"   ⚠️ {pending_warn} 篇超过 3 天")
+
+        lines.extend(["", f"📄 报告: 多物理场仿真/每日蒸馏/{fname}"])
+        return "\n".join(lines)
+    except Exception as e:
+        log(f"[Watchdog] 读报告失败: {e}")
+        return f"🥃 每日蒸馏完成 — {date_str}\n\n📄 报告: 多物理场仿真/每日蒸馏/{fname}"
+
+
+def _watch_daily_distill() -> None:
+    """Background daemon: poll for new daily distill reports and push notify."""
+    notified = _load_distill_notified()
+
+    # Seed with already-existing reports so we don't re-notify on restart
+    if os.path.isdir(WATCH_DISTILL_DIR):
+        for fname in os.listdir(WATCH_DISTILL_DIR):
+            if fname.endswith(".md") and fname not in (".state.md", "README.md"):
+                notified.add(fname)
+        _save_distill_notified(notified)
+
+    notify_env = os.environ.get("FEISHU_NOTIFY_USERS", "")
+    notify_users = [u for u in notify_env.split(",") if u] if notify_env else ALLOWED_USERS
+
+    if not os.path.isdir(WATCH_DISTILL_DIR):
+        log(f"[Watchdog] 蒸馏目录不存在，跳过: {WATCH_DISTILL_DIR}")
+        return
+
+    log(f"[Watchdog] 监控: {WATCH_DISTILL_DIR} | 目标用户: {len(notify_users)} | "
+        f"已追踪 {len(notified)} 份旧报告")
+
+    while True:
+        try:
+            for fname in os.listdir(WATCH_DISTILL_DIR):
+                if not fname.endswith(".md"):
+                    continue
+                if fname in (".state.md", "README.md"):
+                    continue
+                if fname in notified:
+                    continue
+
+                log(f"[Watchdog] 🥃 新报告: {fname}")
+                notified.add(fname)
+                _save_distill_notified(notified)
+
+                report_path = os.path.join(WATCH_DISTILL_DIR, fname)
+                summary = _summarize_daily_report(report_path, fname)
+
+                if not notify_users:
+                    log("[Watchdog] 无通知目标用户，跳过推送")
+                for uid in notify_users:
+                    _send_proactive_msg(uid, summary)
+                    _time_module.sleep(0.5)
+        except Exception as e:
+            log(f"[Watchdog] 扫描异常: {e}")
+
+        _time_module.sleep(60)
+
+# ============================================================
 # 主入口
 # ============================================================
 
@@ -393,6 +523,13 @@ def main():
         event_handler=event_handler,
         log_level=lark.LogLevel.INFO,
     )
+
+    # 启动每日蒸馏 Watchdog（后台轮询新报告并主动通知）
+    threading.Thread(
+        target=_watch_daily_distill,
+        daemon=True,
+        name="distill-watchdog",
+    ).start()
 
     log("[OK] Feishu Bot started, waiting for messages...")
     print("[OK] Connected. Send message from Feishu app. Ctrl+C to stop")

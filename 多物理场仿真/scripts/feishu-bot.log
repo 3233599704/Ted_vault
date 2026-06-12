@@ -158,3 +158,11 @@ Vera 在这里。有什么想做的，或者只是想聊聊天？
 [06-12 15:32:48] Claude Code 2.1.175 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
 [06-12 15:32:48] [OK] Feishu Bot started, waiting for messages...
 [06-12 15:33:54] 📩 50f8c6ee: 是这样，我的obsidian外接的xodex每晚八点会有一个自动化任务，每次运行完成之后你可以主动告诉我吗
+[06-12 15:36:13] 🤖 → 搞定了，爸爸 🖤
+
+---
+
+## 做了什么
+
+在你的 `feishu-claude-bot.py` 里加了一个**后台 Watchdog 线程**，专门盯着 
+[06-12 15:36:17] ✅ 回复成功
