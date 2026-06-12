@@ -16,11 +16,14 @@ import os
 import sys
 import re
 import json
+import base64
 import hashlib
 import shutil
 import subprocess
 import threading
 import time as _time_module
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -56,6 +59,10 @@ LOG_FILE = os.path.join(SCRIPT_DIR, "feishu-bot.log")
 LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
 SESSION_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-sessions.json")
 IMAGE_SAVE_DIR = os.path.join(VAULT_PATH, "多物理场仿真", "raw", "图片")
+VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "anthropic").lower()
+VISION_API_KEY = os.environ.get("VISION_API_KEY", "")
+VISION_API_URL = os.environ.get("VISION_API_URL", "")
+VISION_MODEL = os.environ.get("VISION_MODEL", "")
 
 # ============================================================
 # 日志
@@ -300,6 +307,133 @@ def detect_image_extension(raw_bytes: bytes, fallback_name: str = "") -> str:
         return extension
     return ".png"
 
+
+def image_media_type(path: str) -> str:
+    extension = os.path.splitext(path)[1].lower()
+    return {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+    }.get(extension, "image/png")
+
+
+def extract_openai_output_text(response: dict) -> str:
+    if response.get("output_text"):
+        return str(response["output_text"]).strip()
+    parts = []
+    for item in response.get("output", []):
+        for content in item.get("content", []):
+            if content.get("type") == "output_text" and content.get("text"):
+                parts.append(str(content["text"]))
+    return "\n".join(parts).strip()
+
+
+def analyze_image_with_vision_api(path: str) -> str:
+    """Analyze an image with a separate vision-capable API."""
+    if not VISION_API_KEY:
+        raise RuntimeError(
+            "尚未配置视觉模型。当前 DeepSeek 接口不支持图片输入；"
+            "请设置 VISION_API_KEY 后重启 Bot。"
+        )
+
+    with open(path, "rb") as f:
+        image_b64 = base64.b64encode(f.read()).decode("ascii")
+    media_type = image_media_type(path)
+    prompt = (
+        "请用中文分析这张图片。说明：1. 主要内容；"
+        "2. 所有可识别文字、数字、图表轴和关键数据；"
+        "3. 对图片含义的解释；4. 适合记录进 Obsidian 的要点。"
+        "不确定的内容必须明确标注，不要猜测。"
+    )
+
+    if VISION_PROVIDER == "anthropic":
+        url = VISION_API_URL or "https://api.anthropic.com/v1/messages"
+        model = VISION_MODEL or "claude-sonnet-4-6"
+        payload = {
+            "model": model,
+            "max_tokens": 1600,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": image_b64,
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }],
+        }
+        headers = {
+            "x-api-key": VISION_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+    elif VISION_PROVIDER == "openai":
+        url = VISION_API_URL or "https://api.openai.com/v1/responses"
+        model = VISION_MODEL or "gpt-5.4-mini"
+        payload = {
+            "model": model,
+            "max_output_tokens": 1600,
+            "input": [{
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": prompt},
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:{media_type};base64,{image_b64}",
+                    },
+                ],
+            }],
+        }
+        headers = {
+            "Authorization": f"Bearer {VISION_API_KEY}",
+            "content-type": "application/json",
+        }
+    else:
+        raise RuntimeError(
+            f"不支持的 VISION_PROVIDER: {VISION_PROVIDER}，"
+            "请使用 anthropic 或 openai。"
+        )
+
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(
+            request,
+            timeout=MAX_CLAUDE_SECONDS,
+        ) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"视觉 API 请求失败（HTTP {e.code}）：{error_body[:400]}"
+        ) from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"视觉 API 连接失败：{e.reason}") from e
+
+    if VISION_PROVIDER == "anthropic":
+        text = "\n".join(
+            str(block.get("text", ""))
+            for block in result.get("content", [])
+            if block.get("type") == "text"
+        ).strip()
+    else:
+        text = extract_openai_output_text(result)
+
+    if not text:
+        raise RuntimeError("视觉模型返回了空结果。")
+    return text
+
 # ============================================================
 # 消息处理（官方 EventDispatcherHandler 模式）
 # ============================================================
@@ -388,12 +522,22 @@ def handle_image_message(sender_id: str, msg_id: str, image_key: str) -> None:
         log(f"💾 图片已保存: {save_path} ({len(raw_bytes)} bytes)")
 
         relative_path = os.path.relpath(save_path, VAULT_PATH).replace("\\", "/")
+        try:
+            vision_result = analyze_image_with_vision_api(save_path)
+        except RuntimeError as e:
+            log(f"视觉分析不可用: {e}")
+            reply_text_message(
+                msg_id,
+                f"图片已保存到 `{relative_path}`，但暂时无法识别：{e}",
+            )
+            return
+
         prompt = (
-            f"用户刚刚在飞书发送了一张图片，已保存到 `{relative_path}`。"
-            "请使用 Read 工具读取并分析这张图片。用中文说明："
-            "1. 图片的主要内容；2. 可识别的文字或关键数据；"
-            "3. 值得记录到 Obsidian 的信息。"
-            "不要声称看不到图片。如果图片模糊或信息不确定，请明确指出。"
+            f"用户刚刚发送了一张图片，保存在 `{relative_path}`。"
+            "独立视觉模型已经得到以下分析：\n\n"
+            f"{vision_result}\n\n"
+            "请基于这份视觉结果，用中文给用户一个清晰、简洁的总结，"
+            "并把图片内容作为当前连续会话的上下文记住。"
         )
         analysis = clean_reply(run_claude(sender_id, prompt))
         size_kb = len(raw_bytes) / 1024

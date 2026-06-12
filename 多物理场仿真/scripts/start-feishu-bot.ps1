@@ -13,6 +13,18 @@ $env:FEISHU_APP_ID = [Environment]::GetEnvironmentVariable(
 $env:FEISHU_APP_SECRET = [Environment]::GetEnvironmentVariable(
     "FEISHU_APP_SECRET", "User"
 )
+$env:VISION_PROVIDER = [Environment]::GetEnvironmentVariable(
+    "VISION_PROVIDER", "User"
+)
+$env:VISION_API_KEY = [Environment]::GetEnvironmentVariable(
+    "VISION_API_KEY", "User"
+)
+$env:VISION_API_URL = [Environment]::GetEnvironmentVariable(
+    "VISION_API_URL", "User"
+)
+$env:VISION_MODEL = [Environment]::GetEnvironmentVariable(
+    "VISION_MODEL", "User"
+)
 
 Set-Location -LiteralPath $scriptDir
 

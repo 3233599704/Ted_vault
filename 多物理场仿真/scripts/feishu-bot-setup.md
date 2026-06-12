@@ -114,6 +114,29 @@ Bot 有单实例保护，重复启动不会产生多个连接。计划任务只�
 同一位飞书用户的消息会自动恢复上一次 Claude 会话，Bot 或电脑重启后也能继续。
 发送 `/new`、`/reset` 或 `新会话` 可以清空当前用户的聊天上下文。
 
+### 图片识别
+
+图片会先保存到 `多物理场仿真/raw/图片/`，再交给单独的视觉模型分析。
+当前文字模型 DeepSeek 不支持图片输入，因此需要配置一个视觉 API。
+
+使用 Anthropic Claude Vision：
+
+```powershell
+[Environment]::SetEnvironmentVariable("VISION_PROVIDER", "anthropic", "User")
+[Environment]::SetEnvironmentVariable("VISION_API_KEY", "你的 Anthropic API Key", "User")
+[Environment]::SetEnvironmentVariable("VISION_MODEL", "claude-sonnet-4-6", "User")
+```
+
+或使用 OpenAI Vision：
+
+```powershell
+[Environment]::SetEnvironmentVariable("VISION_PROVIDER", "openai", "User")
+[Environment]::SetEnvironmentVariable("VISION_API_KEY", "你的 OpenAI API Key", "User")
+[Environment]::SetEnvironmentVariable("VISION_MODEL", "gpt-5.4-mini", "User")
+```
+
+配置后重启 `FeishuClaudeBot`。API Key 仅保存在 Windows 用户环境变量中。
+
 ---
 
 ## 🔒 安全建议
