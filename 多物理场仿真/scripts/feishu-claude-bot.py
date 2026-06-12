@@ -34,8 +34,8 @@ from lark_oapi.api.im.v1 import (
 # 配置区
 # ============================================================
 
-APP_ID = os.environ.get("FEISHU_APP_ID", "cli_aaa1df5bc2385bcb")
-APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "1xC0wBdmrgU6wxTwRFPPre4DstFoqqVT")
+APP_ID = os.environ.get("FEISHU_APP_ID", "")
+APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 
 # 白名单：只有这些 open_id 能触发 AI（留空 = 允许所有人）
 ALLOWED_USERS = [
