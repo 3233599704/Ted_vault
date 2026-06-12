@@ -42,7 +42,7 @@ ALLOWED_USERS = [
 ]
 
 VAULT_PATH = os.environ.get("VAULT_PATH", r"D:\Staid\app\Obsidian\Ted_vault")
-CLAUDE_CMD = os.environ.get("CLAUDE_CMD", "claude")
+CLAUDE_CMD = os.environ.get("CLAUDE_CMD", r"C:\Users\32335\AppData\Roaming\npm\claude.cmd")
 MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "120"))
 LOG_FILE = os.path.join(VAULT_PATH, "多物理场仿真", "scripts", "feishu-bot.log")
 

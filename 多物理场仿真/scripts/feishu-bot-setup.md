@@ -73,18 +73,18 @@ claude --version
 
 ## 📋 第四步：启动 Bot
 
-```bash
-# 设置环境变量
-export FEISHU_APP_ID="cli_xxxxxxxxxxxx"
-export FEISHU_APP_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxx"
-export FEISHU_ALLOWED_USERS="ou_xxx"   # 你的飞书 open_id（可选，留空不限制）
-export VAULT_PATH="D:\Staid\app\Obsidian\Ted_vault"
+凭证已写入脚本，直接跑：
 
-# 启动
-python feishu-claude-bot.py
+```bash
+cd "D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\scripts"
+py feishu-claude-bot.py
 ```
 
-看到 `✅ 已连接飞书长连接，手机发消息即可对话` 就成功了。
+看到 `[OK] Connected to wss://msg-frontier.feishu.cn/...` 就成功了。
+
+> 如果遇到 `UnicodeEncodeError`，说明 Windows 控制台编码问题，脚本已内置 UTF-8 修复。
+> 
+> 如果想加白名单限制使用者，设置环境变量 `FEISHU_ALLOWED_USERS=ou_xxx,ou_yyy`，或在脚本第 36 行手动填。
 
 ---
 
