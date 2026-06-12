@@ -330,6 +330,22 @@ def extract_openai_output_text(response: dict) -> str:
     return "\n".join(parts).strip()
 
 
+def extract_chat_completion_text(response: dict) -> str:
+    choices = response.get("choices", [])
+    if not choices:
+        return ""
+    content = choices[0].get("message", {}).get("content", "")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        return "\n".join(
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, dict) and part.get("text")
+        ).strip()
+    return str(content).strip()
+
+
 def analyze_image_with_vision_api(path: str) -> str:
     """Analyze an image with a separate vision-capable API."""
     if not VISION_API_KEY:
@@ -395,10 +411,34 @@ def analyze_image_with_vision_api(path: str) -> str:
             "Authorization": f"Bearer {VISION_API_KEY}",
             "content-type": "application/json",
         }
+    elif VISION_PROVIDER == "xiaomi":
+        url = VISION_API_URL or \
+            "https://api.xiaomimimo.com/v1/chat/completions"
+        model = VISION_MODEL or "mimo-v2-omni"
+        payload = {
+            "model": model,
+            "max_tokens": 1600,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{media_type};base64,{image_b64}",
+                        },
+                    },
+                ],
+            }],
+        }
+        headers = {
+            "Authorization": f"Bearer {VISION_API_KEY}",
+            "content-type": "application/json",
+        }
     else:
         raise RuntimeError(
             f"不支持的 VISION_PROVIDER: {VISION_PROVIDER}，"
-            "请使用 anthropic 或 openai。"
+            "请使用 anthropic、openai 或 xiaomi。"
         )
 
     request = urllib.request.Request(
@@ -427,6 +467,8 @@ def analyze_image_with_vision_api(path: str) -> str:
             for block in result.get("content", [])
             if block.get("type") == "text"
         ).strip()
+    elif VISION_PROVIDER == "xiaomi":
+        text = extract_chat_completion_text(result)
     else:
         text = extract_openai_output_text(result)
 

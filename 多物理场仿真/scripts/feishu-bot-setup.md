@@ -135,6 +135,19 @@ Bot 有单实例保护，重复启动不会产生多个连接。计划任务只�
 [Environment]::SetEnvironmentVariable("VISION_MODEL", "gpt-5.4-mini", "User")
 ```
 
+或使用小米 MiMo：
+
+```powershell
+[Environment]::SetEnvironmentVariable("VISION_PROVIDER", "xiaomi", "User")
+[Environment]::SetEnvironmentVariable("VISION_API_KEY", "你的 MiMo API Key", "User")
+[Environment]::SetEnvironmentVariable(
+  "VISION_API_URL",
+  "https://api.xiaomimimo.com/v1/chat/completions",
+  "User"
+)
+[Environment]::SetEnvironmentVariable("VISION_MODEL", "mimo-v2-omni", "User")
+```
+
 配置后重启 `FeishuClaudeBot`。API Key 仅保存在 Windows 用户环境变量中。
 
 ---
