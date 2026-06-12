@@ -42,7 +42,9 @@ ALLOWED_USERS = [
 ]
 
 VAULT_PATH = os.environ.get("VAULT_PATH", r"D:\Staid\app\Obsidian\Ted_vault")
-CLAUDE_CMD = os.environ.get("CLAUDE_CMD", r"C:\Users\32335\AppData\Roaming\npm\claude.cmd")
+CLAUDE_CMD = os.environ.get("CLAUDE_CMD", r"C:\Program Files\nodejs\node.exe")
+CLAUDE_ENTRY = os.environ.get("CLAUDE_ENTRY",
+    r"C:\Users\32335\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\cli-wrapper.cjs")
 MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "120"))
 LOG_FILE = os.path.join(VAULT_PATH, "多物理场仿真", "scripts", "feishu-bot.log")
 
@@ -66,15 +68,13 @@ def log(msg: str):
 
 def run_claude(prompt: str) -> str:
     try:
-        # shell=True 确保 Windows 能找到 node 和 claude.cmd 的完整依赖链
         safe_prompt = prompt.replace('"', "'")
         result = subprocess.run(
-            f'"{CLAUDE_CMD}" --print "{safe_prompt}"',
+            [CLAUDE_CMD, CLAUDE_ENTRY, "--print", safe_prompt],
             cwd=VAULT_PATH,
             capture_output=True, text=True,
             timeout=MAX_CLAUDE_SECONDS,
             encoding="utf-8", errors="replace",
-            shell=True,
         )
         out = result.stdout.strip()
         if not out:
