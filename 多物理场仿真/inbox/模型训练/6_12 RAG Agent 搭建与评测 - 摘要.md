@@ -16,7 +16,7 @@ status: draft
 
 ## 📌 核心内容
 
-- 从零搭建了基于 **DeepSeek-V3** 的本地 RAG 知识库对话 Agent，完整覆盖嵌入→检索→重排→生成全链路
+- 从零搭建了基于 **DeepSeek-V4 Pro** 的本地 RAG 知识库对话 Agent，完整覆盖嵌入→检索→重排→生成全链路
 - 实现了 **5 种检索策略**：BM25、向量(FAISS)、BM25+向量融合(RRF)、Multi-Query+RRF、Multi-Q+RRF+CrossEncoder
 - 建立了**双轨评测体系**：检索评测（Recall/Precision/MRR/NDCG）× 生成评测（LLM-as-Judge 四维打分）
 - 完整记录了 **6 个踩坑修复**（LangChain 包拆分、huggingface 网络、BM25 API 变更等）
@@ -26,14 +26,14 @@ status: draft
 
 ### 技术栈
 
-| 组件 | 选型 |
-|:---|:---|
-| LLM | DeepSeek-V3 (`deepseek-chat`) |
-| 嵌入模型 | BAAI/bge-small-zh-v1.5（本地） |
-| 重排序 | BAAI/bge-reranker-v2-m3（CrossEncoder） |
-| 向量库 | FAISS（399 chunk，持久化） |
-| 关键词检索 | BM25 |
-| 框架 | LangChain |
+| 组件    | 选型                                    |
+| :---- | :------------------------------------ |
+| LLM   | DeepSeek-V4 pro (`deepseek-chat`)     |
+| 嵌入模型  | BAAI/bge-small-zh-v1.5（本地）            |
+| 重排序   | BAAI/bge-reranker-v2-m3（CrossEncoder） |
+| 向量库   | FAISS（399 chunk，持久化）                  |
+| 关键词检索 | BM25                                  |
+| 框架    | LangChain                             |
 
 ### 检索评测结果（5 策略 × 8 测试题）
 
