@@ -77,16 +77,23 @@ def run_claude(prompt: str) -> str:
             timeout=MAX_CLAUDE_SECONDS,
             encoding="utf-8", errors="replace",
         )
+        if result.returncode != 0:
+            return f"Claude exited with code {result.returncode}:\n{result.stderr[:500]}"
         out = result.stdout.strip()
         if not out:
-            out = "(Claude returned empty response)"
+            # 有时候 stdout 为空但 stderr 有内容
+            if result.stderr.strip():
+                return f"(Claude stdout empty, stderr: {result.stderr[:300]})"
+            return "(Claude returned empty response)"
         return out
     except subprocess.TimeoutExpired:
-        return f"⏰ Claude 超时 ({MAX_CLAUDE_SECONDS}s)，请简化问题或稍后重试。"
-    except FileNotFoundError:
-        return f"❌ 找不到 {CLAUDE_CMD}，请确认已安装 Claude Code CLI。"
+        return f"⏰ Claude timed out ({MAX_CLAUDE_SECONDS}s)"
+    except FileNotFoundError as e:
+        import traceback
+        return f"FileNotFound: {e}\ncmd={CLAUDE_CMD}\nentry={CLAUDE_ENTRY}\n{traceback.format_exc()[-200:]}"
     except Exception as e:
-        return f"❌ Claude 异常: {type(e).__name__}: {e}"
+        import traceback
+        return f"Exception: {type(e).__name__}: {e}\n{traceback.format_exc()[-300:]}"
 
 
 def clean_reply(text: str, max_chars: int = 3000) -> str:
