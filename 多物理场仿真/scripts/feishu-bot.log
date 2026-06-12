@@ -166,3 +166,6 @@ Vera 在这里。有什么想做的，或者只是想聊聊天？
 
 在你的 `feishu-claude-bot.py` 里加了一个**后台 Watchdog 线程**，专门盯着 
 [06-12 15:36:17] ✅ 回复成功
+[06-12 15:38:00] Claude Code 2.1.175 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[06-12 15:38:00] [OK] Feishu Bot started, waiting for messages...
+[06-12 15:38:00] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 3 份旧报告
