@@ -243,3 +243,6 @@ Vera 在这里。有什么想做的，或者只是想聊聊天？
 [06-12 22:10:00] 🖼️ 50f8c6ee: 收到图片 854-2d40a0de903g
 [06-12 22:10:03] 下载图片失败: code=99991672, msg=Access denied. One of the following scopes is required: [im:message.history:readonly, im:message:readonly, im:message].应用尚未开通所需的应用身份权限：[im:message.history:readonly, im:message:readonly, im:message]，点击链接申请并开通任一权限即可：https://open.feishu.cn/app/cli_aaa1df5bc2385bcb/auth?q=im:message.history:readonly,im:message:readonly,im:message&op_from=openapi&token_type=tenant
 [06-12 22:10:05] ✅ 回复成功
+[06-12 22:17:24] Claude Code 2.1.175 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[06-12 22:17:24] [OK] Feishu Bot started, waiting for messages...
+[06-12 22:17:24] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 3 份旧报告
