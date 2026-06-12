@@ -41,6 +41,8 @@ created: 2026-06-12
 | `im:message.p2p_msg:readonly` | 读取用户发给机器人的单聊消息 |
 | `im:message:send_as_bot` | 以机器人身份发送消息 |
 | `im:message.group_at_msg:readonly` | 接收群聊中 @机器人的消息 |
+| `im:message:readonly` | 下载用户发给机器人的图片资源 |
+| `im:resource:upload` | 上传 Bot 生成的 Opus 语音 |
 
 5. 事件订阅 → 添加事件 → **接收消息 v2.0** → `im.message.receive_v1`
 6. 订阅方式选 **使用长连接**（无需配置请求网址！）
