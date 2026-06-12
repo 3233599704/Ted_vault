@@ -20,10 +20,13 @@ import base64
 import hashlib
 import shutil
 import subprocess
+import tempfile
 import threading
 import time as _time_module
 import urllib.error
 import urllib.request
+import wave
+from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -35,6 +38,7 @@ import lark_oapi as lark
 from lark_oapi.api.im.v1 import (
     ReplyMessageRequest, ReplyMessageRequestBody,
     CreateMessageRequest, CreateMessageRequestBody,
+    CreateFileRequest, CreateFileRequestBody,
     GetMessageResourceRequest,
 )
 
@@ -58,11 +62,20 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "feishu-bot.log")
 LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
 SESSION_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-sessions.json")
+VOICE_SETTINGS_FILE = os.path.join(SCRIPT_DIR, ".feishu-voice-settings.json")
 IMAGE_SAVE_DIR = os.path.join(VAULT_PATH, "多物理场仿真", "raw", "图片")
 VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "anthropic").lower()
 VISION_API_KEY = os.environ.get("VISION_API_KEY", "")
 VISION_API_URL = os.environ.get("VISION_API_URL", "")
 VISION_MODEL = os.environ.get("VISION_MODEL", "")
+TTS_API_KEY = os.environ.get("TTS_API_KEY") or VISION_API_KEY
+TTS_API_URL = (
+    os.environ.get("TTS_API_URL")
+    or "https://api.xiaomimimo.com/v1/chat/completions"
+)
+TTS_MODEL = os.environ.get("TTS_MODEL") or "mimo-v2.5-tts"
+TTS_VOICE = os.environ.get("TTS_VOICE") or "mimo_default"
+TTS_MAX_CHARS = int(os.environ.get("TTS_MAX_CHARS") or "1200")
 
 # ============================================================
 # 日志
@@ -138,6 +151,7 @@ def find_claude_command() -> list[str]:
 CLAUDE_COMMAND: list[str] = []
 CLAUDE_RUN_LOCK = threading.Lock()
 SESSION_LOCK = threading.Lock()
+VOICE_SETTINGS_LOCK = threading.Lock()
 MESSAGE_EXECUTOR = ThreadPoolExecutor(
     max_workers=1,
     thread_name_prefix="feishu-message",
@@ -172,6 +186,31 @@ def save_sessions(sessions: dict[str, str]) -> None:
 
 
 SESSIONS = load_sessions()
+
+
+def load_voice_settings() -> dict[str, bool]:
+    with VOICE_SETTINGS_LOCK:
+        try:
+            with open(VOICE_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return {}
+    return {
+        str(user_id): bool(enabled)
+        for user_id, enabled in data.items()
+        if user_id
+    }
+
+
+def save_voice_settings() -> None:
+    temp_file = VOICE_SETTINGS_FILE + ".tmp"
+    with VOICE_SETTINGS_LOCK:
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(VOICE_SETTINGS, f, ensure_ascii=False, indent=2)
+        os.replace(temp_file, VOICE_SETTINGS_FILE)
+
+
+VOICE_SETTINGS = load_voice_settings()
 
 
 def reset_session(sender_id: str) -> None:
@@ -287,6 +326,166 @@ def reply_text_message(msg_id: str, text: str) -> bool:
         log(f"❌ 回复失败: code={resp.code}, msg={resp.msg}")
         return False
     log("✅ 回复成功")
+    return True
+
+
+def prepare_tts_text(text: str) -> str:
+    text = re.sub(r"```.*?```", "代码内容已省略。", text, flags=re.DOTALL)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"https?://\S+", "链接已省略", text)
+    text = re.sub(r"[*#>|_~-]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= TTS_MAX_CHARS:
+        return text
+
+    shortened = text[:TTS_MAX_CHARS]
+    sentence_end = max(
+        shortened.rfind("。"),
+        shortened.rfind("！"),
+        shortened.rfind("？"),
+    )
+    if sentence_end > TTS_MAX_CHARS // 2:
+        shortened = shortened[:sentence_end + 1]
+    return shortened + " 后续内容请查看文字消息。"
+
+
+def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
+    if not TTS_API_KEY:
+        raise RuntimeError("尚未配置 TTS_API_KEY。")
+
+    spoken_text = prepare_tts_text(text)
+    if not spoken_text:
+        raise RuntimeError("没有可朗读的文本。")
+
+    payload = {
+        "model": TTS_MODEL,
+        "messages": [{"role": "assistant", "content": spoken_text}],
+        "modalities": ["text", "audio"],
+        "audio": {"voice": TTS_VOICE, "format": "wav"},
+    }
+    request = urllib.request.Request(
+        TTS_API_URL,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {TTS_API_KEY}",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(
+            request,
+            timeout=MAX_CLAUDE_SECONDS,
+        ) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"MiMo TTS 请求失败（HTTP {e.code}）：{error_body[:400]}"
+        ) from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"MiMo TTS 连接失败：{e.reason}") from e
+
+    choices = result.get("choices", [])
+    audio_data = (
+        choices[0].get("message", {}).get("audio", {}).get("data")
+        if choices else None
+    )
+    if not audio_data:
+        raise RuntimeError("MiMo TTS 返回中没有音频数据。")
+
+    wav_bytes = base64.b64decode(audio_data)
+    with wave.open(BytesIO(wav_bytes), "rb") as wav_file:
+        duration_ms = round(
+            wav_file.getnframes() / wav_file.getframerate() * 1000
+        )
+
+    try:
+        import imageio_ffmpeg
+    except ImportError as e:
+        raise RuntimeError(
+            "缺少 imageio-ffmpeg，请运行 `py -m pip install imageio-ffmpeg`。"
+        ) from e
+
+    with tempfile.TemporaryDirectory(prefix="feishu-tts-") as temp_dir:
+        wav_path = os.path.join(temp_dir, "speech.wav")
+        opus_path = os.path.join(temp_dir, "speech.opus")
+        with open(wav_path, "wb") as f:
+            f.write(wav_bytes)
+
+        conversion = subprocess.run(
+            [
+                imageio_ffmpeg.get_ffmpeg_exe(),
+                "-y",
+                "-loglevel", "error",
+                "-i", wav_path,
+                "-c:a", "libopus",
+                "-b:a", "32k",
+                "-vbr", "on",
+                "-application", "voip",
+                opus_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if conversion.returncode != 0:
+            raise RuntimeError(
+                f"Opus 转码失败：{conversion.stderr.strip()[:400]}"
+            )
+        with open(opus_path, "rb") as f:
+            opus_bytes = f.read()
+
+    return opus_bytes, duration_ms
+
+
+def reply_audio_message(msg_id: str, text: str) -> bool:
+    opus_bytes, duration_ms = synthesize_mimo_speech(text)
+    audio_stream = BytesIO(opus_bytes)
+    audio_stream.name = "reply.opus"
+
+    upload_body = CreateFileRequestBody.builder() \
+        .file_type("opus") \
+        .file_name("reply.opus") \
+        .duration(duration_ms) \
+        .file(audio_stream) \
+        .build()
+    upload_req = CreateFileRequest.builder() \
+        .request_body(upload_body) \
+        .build()
+    upload_resp = lark.Client.builder() \
+        .app_id(APP_ID) \
+        .app_secret(APP_SECRET) \
+        .build() \
+        .im.v1.file.create(upload_req)
+    if not upload_resp.success():
+        raise RuntimeError(
+            f"飞书音频上传失败: code={upload_resp.code}, "
+            f"msg={upload_resp.msg}"
+        )
+
+    file_key = upload_resp.data.file_key
+    body = ReplyMessageRequestBody.builder() \
+        .content(json.dumps({"file_key": file_key})) \
+        .msg_type("audio") \
+        .build()
+    req = ReplyMessageRequest.builder() \
+        .message_id(msg_id) \
+        .request_body(body) \
+        .build()
+    resp = lark.Client.builder() \
+        .app_id(APP_ID) \
+        .app_secret(APP_SECRET) \
+        .build() \
+        .im.v1.message.reply(req)
+    if not resp.success():
+        raise RuntimeError(
+            f"飞书语音发送失败: code={resp.code}, msg={resp.msg}"
+        )
+
+    log(f"🔊 语音回复成功: {duration_ms}ms / {len(opus_bytes)} bytes")
     return True
 
 
@@ -491,15 +690,54 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
             log(f"⛔ 非白名单用户: {sender_id}")
             return
 
-        if user_text.lower() in {"/new", "/reset"} or user_text == "新会话":
+        normalized = user_text.strip()
+        lower_text = normalized.lower()
+        force_voice = False
+
+        if lower_text == "/voice on":
+            VOICE_SETTINGS[sender_id] = True
+            save_voice_settings()
+            reply_text_message(
+                msg_id,
+                f"语音回复已开启。当前音色：{TTS_VOICE}。"
+            )
+            return
+        if lower_text == "/voice off":
+            VOICE_SETTINGS[sender_id] = False
+            save_voice_settings()
+            reply_text_message(msg_id, "语音回复已关闭。")
+            return
+        if lower_text in {"/voice", "/voice status"}:
+            status = "开启" if VOICE_SETTINGS.get(sender_id, False) else "关闭"
+            reply_text_message(
+                msg_id,
+                f"语音回复当前为：{status}。音色：{TTS_VOICE}。\n"
+                "命令：/voice on、/voice off、/voice 你的问题"
+            )
+            return
+        if lower_text.startswith("/voice "):
+            normalized = normalized[7:].strip()
+            if not normalized:
+                reply_text_message(msg_id, "请在 /voice 后填写问题。")
+                return
+            force_voice = True
+
+        if lower_text in {"/new", "/reset"} or normalized == "新会话":
             reset_session(sender_id)
             reply = "已开启新会话。下一条消息将不再使用之前的聊天上下文。"
         else:
             # 调 Claude
-            reply = run_claude(sender_id, user_text)
+            reply = run_claude(sender_id, normalized)
         reply = clean_reply(reply)
         log(f"🤖 → {reply[:80]}")
         reply_text_message(msg_id, reply)
+
+        if force_voice or VOICE_SETTINGS.get(sender_id, False):
+            try:
+                reply_audio_message(msg_id, reply)
+            except Exception as e:
+                log(f"语音回复失败: {type(e).__name__}: {e}")
+                reply_text_message(msg_id, f"语音生成失败：{e}")
 
     except json.JSONDecodeError:
         log("消息 JSON 解析失败，跳过")

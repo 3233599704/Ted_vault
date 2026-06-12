@@ -150,6 +150,32 @@ Bot 有单实例保护，重复启动不会产生多个连接。计划任务只�
 
 配置后重启 `FeishuClaudeBot`。API Key 仅保存在 Windows 用户环境变量中。
 
+### 语音回复
+
+语音由小米 MiMo `mimo-v2.5-tts` 合成，再转成飞书语音消息所需的 Opus。
+
+```powershell
+py -m pip install imageio-ffmpeg
+[Environment]::SetEnvironmentVariable("TTS_API_KEY", "你的 MiMo API Key", "User")
+[Environment]::SetEnvironmentVariable(
+  "TTS_API_URL",
+  "https://api.xiaomimimo.com/v1/chat/completions",
+  "User"
+)
+[Environment]::SetEnvironmentVariable("TTS_MODEL", "mimo-v2.5-tts", "User")
+[Environment]::SetEnvironmentVariable("TTS_VOICE", "mimo_default", "User")
+```
+
+飞书命令：
+
+- `/voice on`：以后每次同时回复文字和语音
+- `/voice off`：关闭持续语音
+- `/voice status`：查看状态和当前音色
+- `/voice 你的问题`：仅本次用语音回答
+
+可用音色包括：`mimo_default`、`冰糖`、`茉莉`、`苏打`、`白桦`、`Mia`、
+`Chloe`、`Milo`、`Dean`。
+
 ---
 
 ## 🔒 安全建议

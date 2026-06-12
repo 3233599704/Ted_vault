@@ -25,6 +25,21 @@ $env:VISION_API_URL = [Environment]::GetEnvironmentVariable(
 $env:VISION_MODEL = [Environment]::GetEnvironmentVariable(
     "VISION_MODEL", "User"
 )
+$env:TTS_API_KEY = [Environment]::GetEnvironmentVariable(
+    "TTS_API_KEY", "User"
+)
+$env:TTS_API_URL = [Environment]::GetEnvironmentVariable(
+    "TTS_API_URL", "User"
+)
+$env:TTS_MODEL = [Environment]::GetEnvironmentVariable(
+    "TTS_MODEL", "User"
+)
+$env:TTS_VOICE = [Environment]::GetEnvironmentVariable(
+    "TTS_VOICE", "User"
+)
+$env:TTS_MAX_CHARS = [Environment]::GetEnvironmentVariable(
+    "TTS_MAX_CHARS", "User"
+)
 
 Set-Location -LiteralPath $scriptDir
 
