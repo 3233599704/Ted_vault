@@ -31,6 +31,7 @@ import lark_oapi as lark
 from lark_oapi.api.im.v1 import (
     ReplyMessageRequest, ReplyMessageRequestBody,
     CreateMessageRequest, CreateMessageRequestBody,
+    GetImageRequest,
 )
 
 # ============================================================
@@ -53,6 +54,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "feishu-bot.log")
 LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
 SESSION_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-sessions.json")
+IMAGE_SAVE_DIR = os.path.join(VAULT_PATH, "多物理场仿真", "raw", "图片")
 
 # ============================================================
 # 日志
@@ -309,6 +311,70 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
         log(f"处理异常: {type(e).__name__}: {e}")
 
 
+def handle_image_message(sender_id: str, msg_id: str, image_key: str) -> None:
+    """Download image from Feishu and save to vault raw/图片/."""
+    try:
+        log(f"🖼️ {sender_id[-8:]}: 收到图片 {image_key[-16:]}")
+
+        # Download image via Feishu API
+        req = GetImageRequest.builder().image_key(image_key).build()
+        resp = lark.Client.builder() \
+            .app_id(APP_ID) \
+            .app_secret(APP_SECRET) \
+            .build() \
+            .im.v1.image.get(req)
+
+        if not resp.success():
+            log(f"下载图片失败: code={resp.code}, msg={resp.msg}")
+            return
+
+        # Get raw bytes from response
+        raw_bytes: bytes | None = None
+        if hasattr(resp, "file") and resp.file is not None:
+            if hasattr(resp.file, "read"):
+                raw_bytes = resp.file.read()
+            elif isinstance(resp.file, (bytes, bytearray)):
+                raw_bytes = bytes(resp.file)
+
+        if not raw_bytes:
+            log("图片响应中无文件数据")
+            return
+
+        # Determine file extension and name
+        fname = getattr(resp, "file_name", None) or f"{image_key}.png"
+        if not fname.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")):
+            fname += ".png"
+
+        # Ensure save directory exists
+        os.makedirs(IMAGE_SAVE_DIR, exist_ok=True)
+        save_path = os.path.join(IMAGE_SAVE_DIR, fname)
+
+        with open(save_path, "wb") as f:
+            f.write(raw_bytes)
+
+        log(f"💾 图片已保存: {save_path} ({len(raw_bytes)} bytes)")
+
+        # Reply to user
+        size_kb = len(raw_bytes) / 1024
+        reply = f"图片已保存到 raw/图片/{fname} ({size_kb:.1f} KB)"
+        body = ReplyMessageRequestBody.builder() \
+            .content(json.dumps({"text": reply})) \
+            .msg_type("text") \
+            .build()
+        reply_req = ReplyMessageRequest.builder() \
+            .message_id(msg_id) \
+            .request_body(body) \
+            .build()
+        lark.Client.builder() \
+            .app_id(APP_ID) \
+            .app_secret(APP_SECRET) \
+            .build() \
+            .im.v1.message.reply(reply_req)
+
+    except Exception as e:
+        log(f"图片处理异常: {type(e).__name__}: {e}")
+
+
 def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
     """Receive an event and hand slow work to a background thread."""
     try:
@@ -322,6 +388,19 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         SEEN_MESSAGES.add(msg_id)
         if len(SEEN_MESSAGES) > MAX_SEEN:
             SEEN_MESSAGES.clear()
+
+        if msg_type == "image":
+            content = json.loads(msg.content)
+            image_key = content.get("image_key", "")
+            if image_key:
+                threading.Thread(
+                    target=handle_image_message,
+                    args=(sender_id, msg_id, image_key),
+                    daemon=True,
+                ).start()
+            else:
+                log("图片消息中无 image_key，跳过")
+            return
 
         if msg_type != "text":
             log(f"跳过非文本消息: {msg_type}")
