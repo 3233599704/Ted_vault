@@ -4,54 +4,41 @@
 手机飞书发消息 → 长连接接收 → Claude Code 处理 → 回复到飞书
 
 前置条件：
-  1. pip install lark-oapi
+  1. pip install lark-oapi （已安装 ✅）
   2. Claude Code CLI 已安装（命令行能跑 `claude`）
   3. 飞书开发者后台创建应用 + 获取 APP_ID / APP_SECRET
 
 启动：
-  python feishu-claude-bot.py
-
-安全：
-  - 只响应白名单用户（ALLOWED_USERS）
-  - Claude Code 在 vault 目录下运行，可访问 Obsidian vault
-  - 超时保护（MAX_CLAUDE_SECONDS）
+  py 多物理场仿真/scripts/feishu-claude-bot.py
 """
 
 import os
-import sys
 import re
 import json
 import subprocess
-import threading
 from datetime import datetime
 
-from lark_oapi.ws import Client, LogLevel
+import lark_oapi as lark
 from lark_oapi.api.im.v1 import (
     CreateMessageRequest, CreateMessageRequestBody,
     ReplyMessageRequest, ReplyMessageRequestBody
 )
-from lark_oapi import Config, Context
 
 # ============================================================
-# 配置区 —— 按你的实际情况修改
+# 配置区
 # ============================================================
 
 APP_ID = os.environ.get("FEISHU_APP_ID", "你的App ID")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "你的App Secret")
 
-# 白名单：只有这些用户的 open_id 能触发 AI 处理
-ALLOWED_USERS = os.environ.get("FEISHU_ALLOWED_USERS", "").split(",")
-# 留空表示允许所有人 → 慎用！
+# 白名单：只有这些 open_id 能触发 AI（留空 = 允许所有人）
+ALLOWED_USERS = [
+    u for u in os.environ.get("FEISHU_ALLOWED_USERS", "").split(",") if u
+]
 
-# Claude Code 配置
-VAULT_PATH = os.environ.get("VAULT_PATH",
-    r"D:\Staid\app\Obsidian\Ted_vault")
-
-MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "120"))
-# Claude Code CLI 命令（Codex 用户同理，改成 codex）
+VAULT_PATH = os.environ.get("VAULT_PATH", r"D:\Staid\app\Obsidian\Ted_vault")
 CLAUDE_CMD = os.environ.get("CLAUDE_CMD", "claude")
-
-# 日志
+MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "120"))
 LOG_FILE = os.path.join(VAULT_PATH, "多物理场仿真", "scripts", "feishu-bot.log")
 
 # ============================================================
@@ -59,8 +46,8 @@ LOG_FILE = os.path.join(VAULT_PATH, "多物理场仿真", "scripts", "feishu-bot
 # ============================================================
 
 def log(msg: str):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{timestamp}] {msg}"
+    ts = datetime.now().strftime("%m-%d %H:%M:%S")
+    line = f"[{ts}] {msg}"
     print(line)
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
@@ -73,60 +60,46 @@ def log(msg: str):
 # ============================================================
 
 def run_claude(prompt: str) -> str:
-    """调用 Claude Code CLI，返回输出文本"""
     try:
         result = subprocess.run(
             [CLAUDE_CMD, "--print", prompt],
             cwd=VAULT_PATH,
-            capture_output=True,
-            text=True,
+            capture_output=True, text=True,
             timeout=MAX_CLAUDE_SECONDS,
-            encoding="utf-8",
-            errors="replace",
+            encoding="utf-8", errors="replace",
         )
-        output = result.stdout.strip()
-        if result.stderr:
-            output += "\n\n--- stderr ---\n" + result.stderr.strip()
-        return output if output else "(Claude returned empty response)"
+        out = result.stdout.strip()
+        if not out:
+            out = "(Claude returned empty response)"
+        return out
     except subprocess.TimeoutExpired:
         return f"⏰ Claude 超时 ({MAX_CLAUDE_SECONDS}s)，请简化问题或稍后重试。"
     except FileNotFoundError:
-        return f"❌ 找不到 {CLAUDE_CMD} 命令，请确认已安装 Claude Code CLI。"
+        return f"❌ 找不到 {CLAUDE_CMD}，请确认已安装 Claude Code CLI。"
     except Exception as e:
-        return f"❌ Claude 执行异常：{type(e).__name__}: {e}"
+        return f"❌ Claude 异常: {type(e).__name__}: {e}"
 
 
 def clean_reply(text: str, max_chars: int = 3000) -> str:
-    """清理输出，截断过长的回复"""
-    # 去掉 ANSI 颜色码
-    text = re.sub(r'\x1b\[[0-9;]*m', '', text)
-    # 去掉可能的文件路径前缀噪音
+    text = re.sub(r'\x1b\[[0-9;]*m', '', text)   # 去 ANSI 颜色
     if len(text) > max_chars:
-        text = text[:max_chars] + "\n\n...(已截断)"
+        text = text[:max_chars] + "\n\n…（已截断）"
     return text
 
 # ============================================================
-# 飞书消息处理
+# 消息处理（官方 EventDispatcherHandler 模式）
 # ============================================================
 
-def is_allowed(sender_open_id: str) -> bool:
-    if not ALLOWED_USERS or ALLOWED_USERS == [""]:
-        return True  # 没设白名单 → 允许所有人
-    return sender_open_id in ALLOWED_USERS
-
-
-def on_message(ctx: Context, conf: Config, event: dict):
-    """接收到飞书消息的回调（长连接模式）"""
+def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
+    """接收消息 v2.0 — 官方长连接回调，data 已自动解析为类型化对象"""
     try:
-        msg_event = event.get("event", {})
-        message = msg_event.get("message", {})
-        msg_type = message.get("message_type", "")
-        content_str = message.get("content", "{}")
-        msg_id = message.get("message_id", "")
-        chat_id = message.get("chat_id", "")
-        sender_id = event.get("event", {}).get("sender", {}).get("sender_id", {}).get("open_id", "")
+        msg = data.event.message
+        sender_id = data.event.sender.sender_id.open_id
+        msg_type = msg.message_type
+        msg_id = msg.message_id
+        content_str = msg.content
 
-        # 只处理文本消息
+        # 只处理文本
         if msg_type != "text":
             log(f"跳过非文本消息: {msg_type}")
             return
@@ -136,80 +109,71 @@ def on_message(ctx: Context, conf: Config, event: dict):
         if not user_text:
             return
 
-        log(f"收到消息 [sender={sender_id}]: {user_text[:80]}...")
+        log(f"📩 {sender_id[-8:]}: {user_text[:80]}")
 
-        # 白名单检查
-        if not is_allowed(sender_id):
-            log(f"拒绝非白名单用户: {sender_id}")
+        # 白名单
+        if ALLOWED_USERS and sender_id not in ALLOWED_USERS:
+            log(f"⛔ 非白名单用户: {sender_id}")
             return
 
-        # 调用 Claude
+        # 调 Claude
         reply = run_claude(user_text)
         reply = clean_reply(reply)
-        log(f"Claude 回复 [{sender_id}]: {reply[:80]}...")
+        log(f"🤖 → {reply[:80]}")
 
-        # 回复到飞书
-        request = ReplyMessageRequest.builder() \
+        # 回复
+        body = ReplyMessageRequestBody.builder() \
+            .content(json.dumps({"text": reply})) \
+            .msg_type("text") \
+            .build()
+        req = ReplyMessageRequest.builder() \
             .message_id(msg_id) \
-            .request_body(
-                ReplyMessageRequestBody.builder()
-                .content(json.dumps({"text": reply}))
-                .msg_type("text")
-                .build()
-            ).build()
+            .request_body(body) \
+            .build()
 
-        response = ctx.client.im.v1.message.reply(request)
-        if not response.success():
-            log(f"回复失败: {response.code} {response.msg}")
+        resp = lark.Client.builder() \
+            .app_id(APP_ID) \
+            .app_secret(APP_SECRET) \
+            .build() \
+            .im.v1.message.reply(req)
+
+        if resp.success():
+            log("✅ 回复成功")
         else:
-            log(f"回复成功 [sender={sender_id}]")
+            log(f"❌ 回复失败: code={resp.code}, msg={resp.msg}")
 
     except json.JSONDecodeError:
-        log("消息内容 JSON 解析失败")
+        log("消息 JSON 解析失败，跳过")
     except Exception as e:
-        log(f"处理消息异常: {type(e).__name__}: {e}")
-
+        log(f"处理异常: {type(e).__name__}: {e}")
 
 # ============================================================
 # 主入口
 # ============================================================
 
 def main():
-    print("""
-╔══════════════════════════════════════════╗
-║   🦜 飞书 ↔ Claude Code 桥接服务        ║
-║   基于飞书长连接 + Claude Code CLI      ║
-║   Vault: {vault}
-║   命令: {cmd}
-╚══════════════════════════════════════════╝
-    """.format(vault=VAULT_PATH, cmd=CLAUDE_CMD))
-
     if APP_ID.startswith("你的"):
-        print("❌ 请先设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET 环境变量")
-        print("   或直接修改脚本顶部的 APP_ID / APP_SECRET")
-        sys.exit(1)
+        print("❌ 请先设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+        print("   或在脚本顶部直接修改 APP_ID / APP_SECRET")
+        return
 
-    # 初始化飞书客户端（长连接模式，无需公网 IP）
-    client = Client(
-        APP_ID, APP_SECRET,
-        log_level=LogLevel.INFO,
+    # 构建事件处理器
+    event_handler = (
+        lark.EventDispatcherHandler.builder("", "")
+        .register_p2_im_message_receive_v1(do_p2_im_message_receive_v1)
+        .build()
     )
 
-    # 注册消息事件
-    client.on("im.message.receive_v1", on_message)
+    # 长连接客户端
+    cli = lark.ws.Client(
+        APP_ID, APP_SECRET,
+        event_handler=event_handler,
+        log_level=lark.LogLevel.INFO,
+    )
 
-    log("飞书 Bot 启动，等待消息...")
-    print("✅ 已连接飞书长连接，手机发消息即可对话")
-    print("   按 Ctrl+C 停止\n")
-
-    try:
-        client.start()
-    except KeyboardInterrupt:
-        log("收到停止信号，关闭连接...")
-        print("\n👋 已停止")
-    except Exception as e:
-        log(f"连接异常: {type(e).__name__}: {e}")
-        print(f"\n❌ 连接失败: {e}")
+    log("🚀 飞书 Bot 启动，长连接已建立，等待消息…")
+    print("✅ 已连接。手机飞书发消息即可对话，Ctrl+C 停止\n")
+    cli.start()
 
 
 if __name__ == "__main__":
