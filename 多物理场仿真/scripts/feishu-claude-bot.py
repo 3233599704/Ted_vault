@@ -19,6 +19,7 @@ import json
 import shutil
 import subprocess
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 # Windows 控制台 UTF-8
@@ -45,7 +46,7 @@ ALLOWED_USERS = [
 VAULT_PATH = os.environ.get("VAULT_PATH", r"D:\Staid\app\Obsidian\Ted_vault")
 CLAUDE_CMD = os.environ.get("CLAUDE_CMD", "")
 CLAUDE_PERMISSION_MODE = os.environ.get("CLAUDE_PERMISSION_MODE", "acceptEdits")
-MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "120"))
+MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "300"))
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "feishu-bot.log")
 LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
@@ -125,6 +126,10 @@ def find_claude_command() -> list[str]:
 CLAUDE_COMMAND: list[str] = []
 CLAUDE_RUN_LOCK = threading.Lock()
 SESSION_LOCK = threading.Lock()
+MESSAGE_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="feishu-message",
+)
 
 # 消息去重（飞书可能对同一消息推送多次）
 SEEN_MESSAGES = set()
@@ -232,7 +237,11 @@ def run_claude(sender_id: str, prompt: str) -> str:
             return "(Claude returned empty response)"
         return out
     except subprocess.TimeoutExpired:
-        return f"⏰ Claude timed out ({MAX_CLAUDE_SECONDS}s)"
+        log(f"Claude 调用超时: {MAX_CLAUDE_SECONDS}s")
+        return (
+            f"Claude 处理超过 {MAX_CLAUDE_SECONDS} 秒，已停止本次任务。"
+            "这通常是因为任务较复杂或网络暂时较慢，可以缩小任务范围后重试。"
+        )
     except FileNotFoundError as e:
         log(f"Claude 可执行文件不存在: {e}")
         return f"找不到 Claude Code CLI：{e}"
@@ -251,33 +260,10 @@ def clean_reply(text: str, max_chars: int = 3000) -> str:
 # 消息处理（官方 EventDispatcherHandler 模式）
 # ============================================================
 
-def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
-    """接收消息 v2.0 — 官方长连接回调，data 已自动解析为类型化对象"""
+
+def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
+    """Run Claude outside the WebSocket callback so heartbeats stay responsive."""
     try:
-        msg = data.event.message
-        sender_id = data.event.sender.sender_id.open_id
-        msg_type = msg.message_type
-        msg_id = msg.message_id
-
-        # 去重
-        if msg_id in SEEN_MESSAGES:
-            return
-        SEEN_MESSAGES.add(msg_id)
-        if len(SEEN_MESSAGES) > MAX_SEEN:
-            SEEN_MESSAGES.clear()
-
-        content_str = msg.content
-
-        # 只处理文本
-        if msg_type != "text":
-            log(f"跳过非文本消息: {msg_type}")
-            return
-
-        content = json.loads(content_str)
-        user_text = content.get("text", "").strip()
-        if not user_text:
-            return
-
         log(f"📩 {sender_id[-8:]}: {user_text[:80]}")
 
         # 白名单
@@ -319,6 +305,41 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         log("消息 JSON 解析失败，跳过")
     except Exception as e:
         log(f"处理异常: {type(e).__name__}: {e}")
+
+
+def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
+    """Receive an event and hand slow work to a background thread."""
+    try:
+        msg = data.event.message
+        sender_id = data.event.sender.sender_id.open_id
+        msg_type = msg.message_type
+        msg_id = msg.message_id
+
+        if msg_id in SEEN_MESSAGES:
+            return
+        SEEN_MESSAGES.add(msg_id)
+        if len(SEEN_MESSAGES) > MAX_SEEN:
+            SEEN_MESSAGES.clear()
+
+        if msg_type != "text":
+            log(f"跳过非文本消息: {msg_type}")
+            return
+
+        content = json.loads(msg.content)
+        user_text = content.get("text", "").strip()
+        if not user_text:
+            return
+
+        MESSAGE_EXECUTOR.submit(
+            process_text_message,
+            sender_id,
+            msg_id,
+            user_text,
+        )
+    except json.JSONDecodeError:
+        log("消息 JSON 解析失败，跳过")
+    except Exception as e:
+        log(f"接收消息异常: {type(e).__name__}: {e}")
 
 # ============================================================
 # 主入口
