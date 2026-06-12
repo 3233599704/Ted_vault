@@ -62,8 +62,9 @@ def log(msg: str):
     except:
         pass
 
-# ============================================================
-# Claude Code 调用
+# 消息去重（飞书可能对同一消息推送多次）
+SEEN_MESSAGES = set()
+MAX_SEEN = 200  # 防止无限增长
 # ============================================================
 
 def run_claude(prompt: str) -> str:
@@ -105,6 +106,14 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         sender_id = data.event.sender.sender_id.open_id
         msg_type = msg.message_type
         msg_id = msg.message_id
+
+        # 去重
+        if msg_id in SEEN_MESSAGES:
+            return
+        SEEN_MESSAGES.add(msg_id)
+        if len(SEEN_MESSAGES) > MAX_SEEN:
+            SEEN_MESSAGES.clear()
+
         content_str = msg.content
 
         # 只处理文本
