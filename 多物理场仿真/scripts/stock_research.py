@@ -14,6 +14,8 @@ import re
 import statistics
 import threading
 import time
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -306,6 +308,163 @@ class AkshareProvider:
         return result
 
 
+class EastmoneyPublicProvider:
+    """Dependency-free fallback for core quotes and price history."""
+
+    name = "东方财富公开行情（免安装备用通道，可能有延迟）"
+
+    def __init__(self, timeout: int = 20):
+        self.timeout = timeout
+
+    def _get_json(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
+        query = urllib.parse.urlencode(params)
+        request = urllib.request.Request(
+            f"{url}?{query}",
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 Chrome/124 Safari/537.36"
+                ),
+                "Referer": "https://quote.eastmoney.com/",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            raise RuntimeError(f"公开行情接口连接失败：{exc}") from exc
+        if not isinstance(payload, dict):
+            raise RuntimeError("公开行情接口返回格式异常")
+        return payload
+
+    def market_snapshot(self) -> list[dict[str, Any]]:
+        payload = self._get_json(
+            "https://82.push2.eastmoney.com/api/qt/clist/get",
+            {
+                "pn": 1,
+                "pz": 6000,
+                "po": 1,
+                "np": 1,
+                "fltt": 2,
+                "invt": 2,
+                "fid": "f3",
+                "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+                "fields": "f12,f14,f2,f3,f5,f6,f8,f10,f9,f23",
+            },
+        )
+        diff = (payload.get("data") or {}).get("diff") or []
+        result = []
+        for row in diff:
+            result.append(
+                {
+                    "代码": row.get("f12"),
+                    "名称": row.get("f14"),
+                    "最新价": row.get("f2"),
+                    "涨跌幅": row.get("f3"),
+                    "成交量": row.get("f5"),
+                    "成交额": row.get("f6"),
+                    "换手率": row.get("f8"),
+                    "量比": row.get("f10"),
+                    "市盈率-动态": row.get("f9"),
+                    "市净率": row.get("f23"),
+                }
+            )
+        return result
+
+    @staticmethod
+    def _market_id(code: str) -> str:
+        return "1" if code.startswith(("5", "6", "9")) else "0"
+
+    def history(self, code: str, start: date, end: date) -> list[dict[str, Any]]:
+        payload = self._get_json(
+            "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+            {
+                "secid": f"{self._market_id(code)}.{code}",
+                "klt": 101,
+                "fqt": 1,
+                "lmt": 500,
+                "end": end.strftime("%Y%m%d"),
+                "iscca": 1,
+                "fields1": "f1,f2,f3,f4,f5,f6",
+                "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+            },
+        )
+        klines = (payload.get("data") or {}).get("klines") or []
+        result = []
+        for line in klines:
+            values = str(line).split(",")
+            if len(values) < 7 or values[0] < start.isoformat():
+                continue
+            result.append(
+                {
+                    "日期": values[0],
+                    "开盘": values[1],
+                    "收盘": values[2],
+                    "最高": values[3],
+                    "最低": values[4],
+                    "成交量": values[5],
+                    "成交额": values[6],
+                }
+            )
+        return result
+
+    def latest_financials(self, today: date) -> dict[str, dict[str, Any]]:
+        # Positive dynamic P/E in the snapshot already filters currently
+        # profitable companies. Detailed financials remain an AKShare upgrade.
+        return {}
+
+    def recent_notices(self, today: date, days: int = 7) -> dict[str, list[str]]:
+        return {}
+
+    def trading_days(self) -> set[date]:
+        start = date.today() - timedelta(days=370)
+        end = date.today() + timedelta(days=370)
+        current = start
+        result = set()
+        while current <= end:
+            if current.weekday() < 5:
+                result.add(current)
+            current += timedelta(days=1)
+        return result
+
+
+class AutoStockDataProvider:
+    """Prefer AKShare and switch once to a dependency-free quote provider."""
+
+    def __init__(self):
+        self.primary = AkshareProvider()
+        self.fallback = EastmoneyPublicProvider()
+        self.active: StockDataProvider = self.primary
+
+    @property
+    def name(self) -> str:
+        return self.active.name
+
+    def _call(self, method: str, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return getattr(self.active, method)(*args, **kwargs)
+        except Exception:
+            if self.active is self.fallback:
+                raise
+            self.active = self.fallback
+            return getattr(self.active, method)(*args, **kwargs)
+
+    def market_snapshot(self) -> list[dict[str, Any]]:
+        return self._call("market_snapshot")
+
+    def history(self, code: str, start: date, end: date) -> list[dict[str, Any]]:
+        return self._call("history", code, start, end)
+
+    def latest_financials(self, today: date) -> dict[str, dict[str, Any]]:
+        return self._call("latest_financials", today)
+
+    def recent_notices(self, today: date, days: int = 7) -> dict[str, list[str]]:
+        return self._call("recent_notices", today, days)
+
+    def trading_days(self) -> set[date]:
+        return self._call("trading_days")
+
+
 @dataclass
 class StockAnalysis:
     code: str
@@ -328,7 +487,7 @@ class StockResearchService:
         cache_seconds: int = 4 * 60 * 60,
         shortlist_size: int = 35,
     ):
-        self.provider = provider or AkshareProvider()
+        self.provider = provider or AutoStockDataProvider()
         self.cache_seconds = cache_seconds
         self.shortlist_size = shortlist_size
         self._lock = threading.Lock()
