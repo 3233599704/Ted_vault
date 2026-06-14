@@ -1,6 +1,7 @@
 import unittest
+from copy import deepcopy
 from datetime import date, datetime, timedelta
-from pathlib import Path
+from unittest.mock import patch
 
 from stock_research import (
     StockResearchService,
@@ -117,21 +118,21 @@ class StockCodeTests(unittest.TestCase):
 
 class WatchlistTests(unittest.TestCase):
     def test_add_remove_duplicate_and_user_isolation(self):
-        path = Path(".test-stock-watchlists.json")
-        temp_path = Path(".test-stock-watchlists.json.tmp")
-        try:
-            path.unlink(missing_ok=True)
-            temp_path.unlink(missing_ok=True)
-            store = WatchlistStore(path)
+        memory = {}
+        store = WatchlistStore("unused-test-path.json")
+        store._load_unlocked = lambda: deepcopy(memory)
+
+        def save_to_memory(path, payload):
+            memory.clear()
+            memory.update(deepcopy(payload))
+
+        with patch("stock_research._atomic_write_json", side_effect=save_to_memory):
             self.assertTrue(store.add("user-a", "600519"))
             self.assertFalse(store.add("user-a", "600519"))
             self.assertEqual(store.list("user-a"), ["600519"])
             self.assertEqual(store.list("user-b"), [])
             self.assertTrue(store.remove("user-a", "600519"))
             self.assertFalse(store.remove("user-a", "600519"))
-        finally:
-            path.unlink(missing_ok=True)
-            temp_path.unlink(missing_ok=True)
 
 
 class ResearchTests(unittest.TestCase):

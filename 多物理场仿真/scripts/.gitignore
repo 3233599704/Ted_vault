@@ -1,5 +1,6 @@
 .pytest_cache/
 __pycache__/
+/tmpydp1zv7m/
 .feishu-claude-bot.lock
 .feishu-claude-sessions.json
 .feishu-claude-sessions.json.tmp

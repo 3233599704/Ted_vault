@@ -233,6 +233,57 @@ MiMo 返回 `HTTP 429` 时，Bot 会自动退避重试三次。若某段文本�
 
 ---
 
+## 📈 A 股模拟研究助手
+
+股票功能会在 A 股收盘后从整个市场筛选 3 至 5 只模拟关注候选，并用普通话
+说明“最近整体向上还是向下、为什么值得观察、哪里需要小心”。它不会输出
+目标价、仓位、保证盈利等内容，只适合在同花顺模拟盘中学习和记录。
+
+安装数据依赖：
+
+```powershell
+py -m pip install akshare
+```
+
+推荐配置：
+
+```powershell
+[Environment]::SetEnvironmentVariable("STOCK_ENABLED", "true", "User")
+[Environment]::SetEnvironmentVariable("STOCK_REPORT_TIME", "15:30", "User")
+[Environment]::SetEnvironmentVariable("STOCK_TIMEZONE", "Asia/Shanghai", "User")
+[Environment]::SetEnvironmentVariable(
+  "FEISHU_STOCK_NOTIFY_USERS",
+  "你的飞书 open_id",
+  "User"
+)
+```
+
+如果已经配置 `FEISHU_ALLOWED_USERS` 或 `FEISHU_NOTIFY_USERS`，股票日报会在
+没有单独设置 `FEISHU_STOCK_NOTIFY_USERS` 时复用它们。配置后重启
+`FeishuClaudeBot`。
+
+飞书命令：
+
+- `/stock report`：立即生成今天的全市场模拟关注名单
+- `/stock 600519`：查看指定股票，单次最多 5 只
+- `/watch add 600519`：加入个人观察列表
+- `/watch remove 600519`：移出个人观察列表
+- `/watch list`：查看个人观察列表
+
+也可以直接发送“今天有哪些股票值得关注”或“看看 600519 的走势”。普通聊天
+里的六位数字不会自动当成股票代码，必须同时出现“股票、走势、看看、模拟盘”
+等语境。
+
+筛选会先排除 ST、退市风险、成交过少、短期暴涨和明显数据异常的股票，再
+比较价格方向、成交活跃程度、公司最近一期收入和利润、估值及近期公告。某项
+数据获取失败时会明确说明或跳过该股票，不会让 Claude 猜测数字。
+
+日报使用北京时间交易日 `15:30` 推送，周末和休市日不推送；同一天重启 Bot
+也不会重复发送。AKShare 来自公开数据接口，可能存在延迟或上游接口变化，
+因此所有报告都仅供同花顺模拟盘学习，不构成真实交易建议。
+
+---
+
 ## 🔒 安全建议
 
 | 配置 | 说明 |
