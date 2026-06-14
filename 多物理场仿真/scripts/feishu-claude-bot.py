@@ -58,11 +58,15 @@ VAULT_PATH = os.environ.get("VAULT_PATH", r"D:\Staid\app\Obsidian\Ted_vault")
 CLAUDE_CMD = os.environ.get("CLAUDE_CMD", "")
 CLAUDE_PERMISSION_MODE = os.environ.get("CLAUDE_PERMISSION_MODE", "acceptEdits")
 MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "300"))
+WS_RESTART_AFTER_SECONDS = int(
+    os.environ.get("WS_RESTART_AFTER_SECONDS", "240")
+)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "feishu-bot.log")
 LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
 SESSION_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-sessions.json")
 VOICE_SETTINGS_FILE = os.path.join(SCRIPT_DIR, ".feishu-voice-settings.json")
+HEALTH_FILE = os.path.join(SCRIPT_DIR, ".feishu-bot-health.json")
 IMAGE_SAVE_DIR = os.path.join(VAULT_PATH, "多物理场仿真", "raw", "图片")
 VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "anthropic").lower()
 VISION_API_KEY = os.environ.get("VISION_API_KEY", "")
@@ -75,7 +79,58 @@ TTS_API_URL = (
 )
 TTS_MODEL = os.environ.get("TTS_MODEL") or "mimo-v2.5-tts"
 TTS_VOICE = os.environ.get("TTS_VOICE") or "mimo_default"
+TTS_VOICE_NAME = os.environ.get("TTS_VOICE_NAME") or TTS_VOICE
+TTS_VOICE_REFERENCE = os.environ.get("TTS_VOICE_REFERENCE", "").strip()
+if TTS_VOICE_REFERENCE and not os.path.isabs(TTS_VOICE_REFERENCE):
+    TTS_VOICE_REFERENCE = os.path.join(SCRIPT_DIR, TTS_VOICE_REFERENCE)
 TTS_MAX_CHARS = int(os.environ.get("TTS_MAX_CHARS") or "1200")
+TTS_PLAYBACK_SPEED = min(
+    max(float(os.environ.get("TTS_PLAYBACK_SPEED") or "1.10"), 0.5),
+    2.0,
+)
+TTS_DYNAMIC_STYLE = (
+    os.environ.get("TTS_DYNAMIC_STYLE") or "true"
+).lower() in {"1", "true", "yes", "on"}
+TTS_DIRECTOR_MODEL = (
+    os.environ.get("TTS_DIRECTOR_MODEL") or "mimo-v2-flash"
+)
+
+TTS_STYLE_PRESETS = {
+    "natural": (
+        "自然、松弛、亲切地说话，像真实聊天。语速中等，停顿自然，"
+        "不要播音腔，不要刻意强调。"
+    ),
+    "romantic": (
+        "像日常聊天一样自然、连贯地说情话，语气柔和亲昵，带一点轻松的"
+        "暧昧和笑意。使用正常偏快的语速，短语自然连读，咬字放松，不要"
+        "逐字强调。魅惑感只轻轻藏在语气里，不耳语、不气声、不拖尾、"
+        "不刻意压低声音，也不要像舞台表演或强势挑逗。"
+    ),
+    "technical": (
+        "清晰、耐心、可信地讲解技术内容。语速中等偏慢，术语和关键结论"
+        "稍作强调，层次分明，但保持自然交流感。"
+    ),
+    "comforting": (
+        "用温柔、安定、包容的语气回应。语速稍慢，音量感柔和，"
+        "句间留出自然停顿，不说教，不制造额外焦虑。"
+    ),
+    "cheerful": (
+        "用明亮、轻快、有感染力的语气表达好消息。节奏稍快，带自然笑意，"
+        "但不要尖锐、亢奋或过度夸张。"
+    ),
+    "warning": (
+        "用沉稳、严肃、明确的语气说明风险或提醒。语速适中，重点清楚，"
+        "不恐吓，不冷漠，也不要使用戏剧化语气。"
+    ),
+    "narrative": (
+        "用有画面感的叙述语气朗读。节奏有轻微起伏，转折处自然停顿，"
+        "保持克制，不要舞台腔。"
+    ),
+    "summary": (
+        "用简洁、沉稳、利落的语气朗读总结。语速中等偏快，"
+        "突出结论和行动项，弱化格式符号感。"
+    ),
+}
 
 # ============================================================
 # 日志
@@ -152,6 +207,12 @@ CLAUDE_COMMAND: list[str] = []
 CLAUDE_RUN_LOCK = threading.Lock()
 SESSION_LOCK = threading.Lock()
 VOICE_SETTINGS_LOCK = threading.Lock()
+HEALTH_LOCK = threading.Lock()
+WS_HEALTH = {
+    "state": "starting",
+    "state_since": _time_module.time(),
+    "detail": "",
+}
 MESSAGE_EXECUTOR = ThreadPoolExecutor(
     max_workers=1,
     thread_name_prefix="feishu-message",
@@ -161,6 +222,87 @@ MESSAGE_EXECUTOR = ThreadPoolExecutor(
 SEEN_MESSAGES = set()
 MAX_SEEN = 200  # 防止无限增长
 # ============================================================
+
+
+def update_ws_health(state: str, detail: str = "") -> None:
+    now = _time_module.time()
+    with HEALTH_LOCK:
+        if WS_HEALTH["state"] != state:
+            WS_HEALTH["state"] = state
+            WS_HEALTH["state_since"] = now
+        WS_HEALTH["detail"] = detail[:300]
+        payload = {
+            "state": WS_HEALTH["state"],
+            "state_since": WS_HEALTH["state_since"],
+            "heartbeat_at": now,
+            "pid": os.getpid(),
+            "detail": WS_HEALTH["detail"],
+        }
+        temp_file = HEALTH_FILE + ".tmp"
+        try:
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
+            os.replace(temp_file, HEALTH_FILE)
+        except OSError as e:
+            log(f"连接健康状态写入失败: {e}")
+
+
+def watch_ws_health(client) -> None:
+    """Publish connection health and recover a reconnect loop that gets stuck."""
+    while True:
+        try:
+            connection = getattr(client, "_conn", None)
+            is_closed = bool(getattr(connection, "closed", False))
+            if connection is not None and not is_closed:
+                update_ws_health("connected")
+            elif WS_HEALTH["state"] not in {"reconnecting", "starting"}:
+                update_ws_health("disconnected")
+        except Exception as e:
+            update_ws_health("unknown", f"{type(e).__name__}: {e}")
+
+        with HEALTH_LOCK:
+            state = str(WS_HEALTH["state"])
+            state_age = _time_module.time() - float(WS_HEALTH["state_since"])
+        if (
+            state in {"starting", "reconnecting", "disconnected", "unknown"}
+            and state_age > WS_RESTART_AFTER_SECONDS
+        ):
+            log(
+                f"飞书连接状态 {state} 已持续 {state_age:.0f} 秒，"
+                "准备自恢复重启"
+            )
+            update_ws_health("restarting", f"stale {state}: {state_age:.0f}s")
+            if sys.platform == "win32":
+                powershell = os.path.join(
+                    os.environ.get("SystemRoot", r"C:\Windows"),
+                    "System32",
+                    "WindowsPowerShell",
+                    "v1.0",
+                    "powershell.exe",
+                )
+                restart_command = (
+                    "Start-Sleep -Seconds 5; "
+                    "Start-ScheduledTask -TaskName 'FeishuClaudeBot'"
+                )
+                try:
+                    subprocess.Popen(
+                        [
+                            powershell,
+                            "-NoProfile",
+                            "-WindowStyle", "Hidden",
+                            "-Command", restart_command,
+                        ],
+                        cwd=SCRIPT_DIR,
+                        creationflags=(
+                            subprocess.CREATE_NO_WINDOW
+                            | subprocess.DETACHED_PROCESS
+                        ),
+                        close_fds=True,
+                    )
+                except OSError as e:
+                    log(f"安排计划任务重启失败: {e}")
+            os._exit(3)
+        _time_module.sleep(20)
 
 
 def load_sessions() -> dict[str, str]:
@@ -218,13 +360,19 @@ def reset_session(sender_id: str) -> None:
     save_sessions(SESSIONS)
 
 
-def invoke_claude(prompt: str, session_id: str | None) -> subprocess.CompletedProcess:
+def invoke_claude(
+    prompt: str,
+    session_id: str | None,
+    response_instruction: str = "",
+) -> subprocess.CompletedProcess:
     system_prompt = (
         "你是通过飞书操作本机 Obsidian Vault 的助手。当前工作目录就是 Vault 根目录。"
         "优先用 Read、Glob、Grep、Edit、Write 工具完成用户请求。"
         "只操作当前 Vault 内的文件，不执行破坏性操作；修改后用中文简要说明结果。"
         "这是连续会话，请结合此前对话理解代词、追问和用户未重复说明的上下文。"
     )
+    if response_instruction:
+        system_prompt += response_instruction
     command = [
         *CLAUDE_COMMAND,
         "--print",
@@ -248,11 +396,19 @@ def invoke_claude(prompt: str, session_id: str | None) -> subprocess.CompletedPr
     )
 
 
-def run_claude(sender_id: str, prompt: str) -> str:
+def run_claude(
+    sender_id: str,
+    prompt: str,
+    response_instruction: str = "",
+) -> str:
     try:
         with CLAUDE_RUN_LOCK:
             session_id = SESSIONS.get(sender_id)
-            result = invoke_claude(prompt, session_id)
+            result = invoke_claude(
+                prompt,
+                session_id,
+                response_instruction,
+            )
 
             # A Claude update or deleted local history can invalidate a session.
             # Retry once as a fresh conversation instead of breaking the bot.
@@ -260,7 +416,11 @@ def run_claude(sender_id: str, prompt: str) -> str:
                 error = result.stderr.strip() or result.stdout.strip()
                 log(f"会话恢复失败，自动新建会话: {error[:300]}")
                 reset_session(sender_id)
-                result = invoke_claude(prompt, None)
+                result = invoke_claude(
+                    prompt,
+                    None,
+                    response_instruction,
+                )
 
         if result.returncode != 0:
             error = result.stderr.strip() or result.stdout.strip()
@@ -308,7 +468,78 @@ def clean_reply(text: str, max_chars: int = 3000) -> str:
     return text
 
 
+def markdown_to_feishu_text(text: str) -> str:
+    """Convert common Markdown into readable Feishu plain text."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    code_blocks: list[str] = []
+
+    def preserve_code(match: re.Match) -> str:
+        language = match.group(1).strip()
+        code = match.group(2).strip("\n")
+        label = f"代码（{language}）：" if language else "代码："
+        token = f"@@FEISHU_CODE_BLOCK_{len(code_blocks)}@@"
+        code_blocks.append(f"{label}\n{code}")
+        return f"\n{token}\n"
+
+    text = re.sub(
+        r"```([^\n`]*)\n?(.*?)```",
+        preserve_code,
+        text,
+        flags=re.DOTALL,
+    )
+    text = re.sub(
+        r"!\[([^\]]*)\]\(([^)]+)\)",
+        lambda m: f"图片：{m.group(1) or m.group(2)}（{m.group(2)}）",
+        text,
+    )
+    text = re.sub(
+        r"\[([^\]]+)\]\(([^)]+)\)",
+        lambda m: f"{m.group(1)}（{m.group(2)}）",
+        text,
+    )
+    text = re.sub(r"<(https?://[^>]+)>", r"\1", text)
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", text)
+    text = re.sub(r"(?m)^\s*[-*_](?:\s*[-*_]){2,}\s*$", "────────", text)
+    text = re.sub(r"(?m)^\s*>\s?", "│ ", text)
+    text = re.sub(r"(?m)^(\s*)[-*+]\s+\[x\]\s+", r"\1☑ ", text, flags=re.I)
+    text = re.sub(r"(?m)^(\s*)[-*+]\s+\[ \]\s+", r"\1☐ ", text)
+    text = re.sub(r"(?m)^(\s*)[-*+]\s+", r"\1• ", text)
+
+    lines = text.split("\n")
+    formatted_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if "|" in line and re.fullmatch(
+            r"\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?",
+            stripped,
+        ):
+            continue
+        if "|" in line and not stripped.startswith("@@FEISHU_CODE_BLOCK_"):
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if len(cells) > 1:
+                indent = line[:len(line) - len(line.lstrip())]
+                line = indent + "  ·  ".join(cells)
+        formatted_lines.append(line)
+    text = "\n".join(formatted_lines)
+
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"__(.+?)__", r"\1", text)
+    text = re.sub(r"~~(.+?)~~", r"\1", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", text)
+    text = re.sub(r"(?<!\w)_([^_\n]+)_(?!\w)", r"\1", text)
+    text = re.sub(r"`([^`\n]+)`", r"\1", text)
+    text = re.sub(r"<[^>\n]+>", "", text)
+
+    for index, code in enumerate(code_blocks):
+        text = text.replace(f"@@FEISHU_CODE_BLOCK_{index}@@", code)
+
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
 def reply_text_message(msg_id: str, text: str) -> bool:
+    text = markdown_to_feishu_text(text)
     body = ReplyMessageRequestBody.builder() \
         .content(json.dumps({"text": text})) \
         .msg_type("text") \
@@ -349,19 +580,40 @@ def prepare_tts_text(text: str) -> str:
     return shortened + " 后续内容请查看文字消息。"
 
 
-def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
-    if not TTS_API_KEY:
-        raise RuntimeError("尚未配置 TTS_API_KEY。")
+def choose_tts_style(text: str) -> tuple[str, str]:
+    """Choose a stable preset and a small content-specific adjustment."""
+    if not TTS_DYNAMIC_STYLE:
+        return "natural", TTS_STYLE_PRESETS["natural"]
 
-    spoken_text = prepare_tts_text(text)
-    if not spoken_text:
-        raise RuntimeError("没有可朗读的文本。")
-
+    preset_list = "\n".join(
+        f"- {name}: {instruction}"
+        for name, instruction in TTS_STYLE_PRESETS.items()
+    )
+    director_prompt = (
+        "你是语音导演。请根据待朗读文本的主要意图，从预设中选择一个。"
+        "只有文本的核心是在表达爱意、暧昧、亲昵或撩拨时才选 romantic；"
+        "不能仅因为出现“爸爸”“宝贝”等称呼就选 romantic。"
+        "romantic 的微调不得要求慢速、耳语、贴耳、气声、拖长尾音、"
+        "逐字强调或刻意压低声音；应优先自然连读和正常聊天节奏。"
+        "只要核心是在解释代码、配置、故障排查、操作步骤、工程或科学知识，"
+        "即使语气亲切，也优先选择 technical。"
+        "不要改写待朗读文本。\n\n"
+        f"预设：\n{preset_list}\n\n"
+        "仅输出一行严格 JSON，不要 Markdown："
+        '{"preset":"预设名","adjustment":"不超过40字的具体演绎微调"}'
+        f"\n\n待朗读文本：\n{text[:1800]}"
+    )
     payload = {
-        "model": TTS_MODEL,
-        "messages": [{"role": "assistant", "content": spoken_text}],
-        "modalities": ["text", "audio"],
-        "audio": {"voice": TTS_VOICE, "format": "wav"},
+        "model": TTS_DIRECTOR_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": "输出必须是有效 JSON，preset 必须来自给定预设。",
+            },
+            {"role": "user", "content": director_prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 120,
     }
     request = urllib.request.Request(
         TTS_API_URL,
@@ -372,27 +624,143 @@ def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
         },
         method="POST",
     )
+
     try:
-        with urllib.request.urlopen(
-            request,
-            timeout=MAX_CLAUDE_SECONDS,
-        ) as response:
+        with urllib.request.urlopen(request, timeout=45) as response:
             result = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"MiMo TTS 请求失败（HTTP {e.code}）：{error_body[:400]}"
-        ) from e
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"MiMo TTS 连接失败：{e.reason}") from e
+        raw = extract_chat_completion_text(result)
+        match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+        decision = json.loads(match.group(0) if match else raw)
+        preset = str(decision.get("preset", "natural")).lower()
+        if preset not in TTS_STYLE_PRESETS:
+            preset = "natural"
+        adjustment = str(decision.get("adjustment", "")).strip()[:80]
+    except Exception as e:
+        log(f"语音导演失败，回退自然风格: {type(e).__name__}: {e}")
+        return "natural", TTS_STYLE_PRESETS["natural"]
+
+    instruction = TTS_STYLE_PRESETS[preset]
+    if adjustment:
+        instruction += f" 本次微调：{adjustment}"
+    return preset, instruction
+
+
+def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
+    if not TTS_API_KEY:
+        raise RuntimeError("尚未配置 TTS_API_KEY。")
+
+    spoken_text = prepare_tts_text(text)
+    if not spoken_text:
+        raise RuntimeError("没有可朗读的文本。")
+
+    style_name, style_instruction = choose_tts_style(spoken_text)
+    log(f"🎙️ 语音风格: {style_name} | {style_instruction[-80:]}")
+
+    messages = [
+        {"role": "user", "content": style_instruction},
+        {"role": "assistant", "content": spoken_text},
+    ]
+    if TTS_MODEL.endswith("-voiceclone"):
+        if not TTS_VOICE_REFERENCE:
+            raise RuntimeError("Voice Clone 模式尚未配置 TTS_VOICE_REFERENCE。")
+        try:
+            with open(TTS_VOICE_REFERENCE, "rb") as reference_file:
+                reference_audio = base64.b64encode(
+                    reference_file.read()
+                ).decode("ascii")
+        except OSError as e:
+            raise RuntimeError(
+                f"无法读取参考音色：{TTS_VOICE_REFERENCE}"
+            ) from e
+
+        extension = os.path.splitext(TTS_VOICE_REFERENCE)[1].lower()
+        mime_type = {
+            ".mp3": "audio/mpeg",
+            ".wav": "audio/wav",
+            ".pcm": "audio/pcm",
+        }.get(extension, "audio/wav")
+        audio_options = {
+            "format": "wav",
+            "voice": f"data:{mime_type};base64,{reference_audio}",
+        }
+    else:
+        audio_options = {"voice": TTS_VOICE, "format": "wav"}
+
+    payload = {
+        "model": TTS_MODEL,
+        "messages": messages,
+        "audio": audio_options,
+    }
+    if not TTS_MODEL.endswith(("-voiceclone", "-voicedesign")):
+        payload["modalities"] = ["text", "audio"]
+    request_body = json.dumps(
+        payload,
+        ensure_ascii=False,
+    ).encode("utf-8")
+    retry_delays = (5, 12, 25)
+    for attempt in range(len(retry_delays) + 1):
+        request = urllib.request.Request(
+            TTS_API_URL,
+            data=request_body,
+            headers={
+                "Authorization": f"Bearer {TTS_API_KEY}",
+                "content-type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=MAX_CLAUDE_SECONDS,
+            ) as response:
+                result = json.loads(response.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8", errors="replace")
+            if e.code == 429 and attempt < len(retry_delays):
+                retry_after = e.headers.get("Retry-After")
+                try:
+                    delay = max(float(retry_after), 1.0)
+                except (TypeError, ValueError):
+                    delay = retry_delays[attempt]
+                log(
+                    f"MiMo TTS 触发限流，{delay:g} 秒后重试 "
+                    f"({attempt + 1}/{len(retry_delays)})"
+                )
+                _time_module.sleep(delay)
+                continue
+            if e.code == 429:
+                raise RuntimeError(
+                    "MiMo TTS 当前触发限流，自动重试后仍未恢复，"
+                    "请稍后再试。文字回复不受影响。"
+                ) from e
+            raise RuntimeError(
+                f"MiMo TTS 请求失败（HTTP {e.code}）：{error_body[:400]}"
+            ) from e
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"MiMo TTS 连接失败：{e.reason}") from e
 
     choices = result.get("choices", [])
-    audio_data = (
-        choices[0].get("message", {}).get("audio", {}).get("data")
-        if choices else None
-    )
+    choice = choices[0] if choices else {}
+    message = choice.get("message", {})
+    audio_data = message.get("audio", {}).get("data")
     if not audio_data:
-        raise RuntimeError("MiMo TTS 返回中没有音频数据。")
+        explanation = extract_chat_completion_text(result)
+        finish_reason = str(choice.get("finish_reason", "")).strip()
+        detail = re.sub(r"\s+", " ", explanation).strip()[:160]
+        log(
+            "MiMo TTS 未返回音频"
+            f" | finish_reason={finish_reason or 'unknown'}"
+            f" | content={detail or '<empty>'}"
+        )
+        if detail:
+            raise RuntimeError(
+                "MiMo 没有为这段文本生成语音，可能受到内容限制。"
+                f"模型说明：{detail}"
+            )
+        raise RuntimeError(
+            "MiMo 没有为这段文本生成语音，可能受到内容限制或服务繁忙。"
+        )
 
     wav_bytes = base64.b64decode(audio_data)
     with wave.open(BytesIO(wav_bytes), "rb") as wav_file:
@@ -419,6 +787,7 @@ def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
                 "-y",
                 "-loglevel", "error",
                 "-i", wav_path,
+                "-filter:a", f"atempo={TTS_PLAYBACK_SPEED:g}",
                 "-c:a", "libopus",
                 "-b:a", "32k",
                 "-vbr", "on",
@@ -438,7 +807,8 @@ def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
         with open(opus_path, "rb") as f:
             opus_bytes = f.read()
 
-    return opus_bytes, duration_ms
+    adjusted_duration_ms = round(duration_ms / TTS_PLAYBACK_SPEED)
+    return opus_bytes, adjusted_duration_ms
 
 
 def reply_audio_message(msg_id: str, text: str) -> bool:
@@ -699,7 +1069,7 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
             save_voice_settings()
             reply_text_message(
                 msg_id,
-                f"语音回复已开启。当前音色：{TTS_VOICE}。"
+                f"语音回复已开启。当前音色：{TTS_VOICE_NAME}。"
             )
             return
         if lower_text == "/voice off":
@@ -711,7 +1081,7 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
             status = "开启" if VOICE_SETTINGS.get(sender_id, False) else "关闭"
             reply_text_message(
                 msg_id,
-                f"语音回复当前为：{status}。音色：{TTS_VOICE}。\n"
+                f"语音回复当前为：{status}。音色：{TTS_VOICE_NAME}。\n"
                 "命令：/voice on、/voice off、/voice 你的问题"
             )
             return
@@ -722,22 +1092,38 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
                 return
             force_voice = True
 
+        voice_mode = force_voice or VOICE_SETTINGS.get(sender_id, False)
         if lower_text in {"/new", "/reset"} or normalized == "新会话":
             reset_session(sender_id)
             reply = "已开启新会话。下一条消息将不再使用之前的聊天上下文。"
         else:
             # 调 Claude
-            reply = run_claude(sender_id, normalized)
+            response_instruction = ""
+            if voice_mode:
+                response_instruction = (
+                    " 当前回复将被直接合成为语音。默认先给结论，并控制在3到6个"
+                    "简短句子内；避免 Markdown 标题、表格和冗长列表，使用自然口语。"
+                    "如果用户明确要求详细解释、完整步骤或长篇内容，则按用户要求展开。"
+                )
+            reply = run_claude(
+                sender_id,
+                normalized,
+                response_instruction=response_instruction,
+            )
         reply = clean_reply(reply)
         log(f"🤖 → {reply[:80]}")
-        reply_text_message(msg_id, reply)
 
-        if force_voice or VOICE_SETTINGS.get(sender_id, False):
+        if voice_mode:
             try:
                 reply_audio_message(msg_id, reply)
             except Exception as e:
                 log(f"语音回复失败: {type(e).__name__}: {e}")
-                reply_text_message(msg_id, f"语音生成失败：{e}")
+                reply_text_message(
+                    msg_id,
+                    f"{reply}\n\n（语音生成失败，已回退为文字：{e}）",
+                )
+        else:
+            reply_text_message(msg_id, reply)
 
     except json.JSONDecodeError:
         log("消息 JSON 解析失败，跳过")
@@ -1061,6 +1447,15 @@ def main():
         event_handler=event_handler,
         log_level=lark.LogLevel.INFO,
     )
+    cli.on_reconnecting = lambda: update_ws_health("reconnecting")
+    cli.on_reconnected = lambda: update_ws_health("connected")
+    update_ws_health("starting")
+    threading.Thread(
+        target=watch_ws_health,
+        args=(cli,),
+        daemon=True,
+        name="feishu-ws-health",
+    ).start()
 
     # 启动每日蒸馏 Watchdog（后台轮询新报告并主动通知）
     threading.Thread(
@@ -1075,6 +1470,11 @@ def main():
         cli.start()
     except KeyboardInterrupt:
         log("Feishu Bot stopped")
+        update_ws_health("stopped", "KeyboardInterrupt")
+    except Exception as e:
+        log(f"飞书长连接异常退出: {type(e).__name__}: {e}")
+        update_ws_health("failed", f"{type(e).__name__}: {e}")
+        return 3
     finally:
         instance_lock.close()
 

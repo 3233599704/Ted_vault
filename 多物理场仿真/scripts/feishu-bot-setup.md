@@ -103,6 +103,14 @@ Stop-ScheduledTask -TaskName "FeishuClaudeBot"
 Bot 有单实例保护，重复启动不会产生多个连接。计划任务只保存脚本路径，
 飞书凭证仍从 Windows 用户环境变量读取。
 
+Bot 内置长连接健康监控，每 20 秒记录一次状态。电脑从休眠恢复、网络切换
+或 DNS 暂时失败后，如果连接连续异常超过 4 分钟，Bot 会主动退出坏进程，
+并通过原有 `FeishuClaudeBot` 计划任务重新启动。健康状态保存在
+`.feishu-bot-health.json`。
+
+休眠期间电脑无法维持飞书 WebSocket，期间发送的事件不保证在恢复后补投。
+Watchdog 可以缩短恢复窗口，但无法找回飞书没有再次投递的历史消息。
+
 ---
 
 ## 📱 第六步：手机上用
@@ -154,7 +162,8 @@ Bot 有单实例保护，重复启动不会产生多个连接。计划任务只�
 
 ### 语音回复
 
-语音由小米 MiMo `mimo-v2.5-tts` 合成，再转成飞书语音消息所需的 Opus。
+语音由小米 MiMo TTS 合成，再转成飞书语音消息所需的 Opus。当前使用
+Voice Clone 固定复用 Kafka 参考音色。
 
 ```powershell
 py -m pip install imageio-ffmpeg
@@ -164,19 +173,63 @@ py -m pip install imageio-ffmpeg
   "https://api.xiaomimimo.com/v1/chat/completions",
   "User"
 )
-[Environment]::SetEnvironmentVariable("TTS_MODEL", "mimo-v2.5-tts", "User")
-[Environment]::SetEnvironmentVariable("TTS_VOICE", "mimo_default", "User")
+[Environment]::SetEnvironmentVariable(
+  "TTS_MODEL",
+  "mimo-v2.5-tts-voiceclone",
+  "User"
+)
+[Environment]::SetEnvironmentVariable("TTS_VOICE_NAME", "Kafka", "User")
+[Environment]::SetEnvironmentVariable(
+  "TTS_VOICE_REFERENCE",
+  "voice-previews\kafka-reference-short.wav",
+  "User"
+)
+[Environment]::SetEnvironmentVariable("TTS_PLAYBACK_SPEED", "1.10", "User")
+[Environment]::SetEnvironmentVariable("TTS_DYNAMIC_STYLE", "true", "User")
+[Environment]::SetEnvironmentVariable("TTS_DIRECTOR_MODEL", "mimo-v2-flash", "User")
 ```
 
 飞书命令：
 
-- `/voice on`：以后每次同时回复文字和语音
-- `/voice off`：关闭持续语音
+- `/voice on`：开启纯语音回复模式
+- `/voice off`：关闭语音模式，恢复纯文字回复
 - `/voice status`：查看状态和当前音色
 - `/voice 你的问题`：仅本次用语音回答
 
-可用音色包括：`mimo_default`、`冰糖`、`茉莉`、`苏打`、`白桦`、`Mia`、
-`Chloe`、`Milo`、`Dean`。
+普通模式只发送文字，语音模式只发送语音。若语音生成或上传失败，Bot 会把
+完整答案回退为文字，避免丢失回复。
+
+语音模式下，Claude 默认把答案压缩到 3 至 6 个简短句子；用户明确要求详细
+解释或完整步骤时仍会展开。合成后的音频默认以 `1.10x` 不变调播放。
+
+文字发送前会自动转换常见 Markdown：标题、列表、链接、代码块和表格会整理
+成飞书 `text` 消息可读的纯文本格式，不再显示原始 Markdown 标记。
+
+保留的自定义参考音色：
+
+- `voice-previews\kafka-reference-short.wav`：当前使用，Kafka 短参考
+- `voice-previews\kafka-reference.wav`：Kafka 完整参考备份
+- `voice-previews\vera-velvet.wav`：成熟、温润、御姐感
+- `voice-previews\vera-cool-idol.wav`：冷艳、清透、利落
+
+切换参考音色时修改 `TTS_VOICE_REFERENCE` 和 `TTS_VOICE_NAME`，然后重启
+`FeishuClaudeBot`。
+
+音色保持固定，演绎风格会根据回复内容自动选择：
+
+- `natural`：自然聊天
+- `romantic`：情话专用，自然连贯、柔和亲昵，略带暧昧和笑意，感动
+- `technical`：技术讲解
+- `comforting`：安慰陪伴
+- `cheerful`：好消息与庆祝
+- `warning`：风险提醒
+- `narrative`：故事叙述
+- `summary`：总结和行动项
+
+语音导演只选择预设并做少量微调，不会修改实际回复文字。
+
+MiMo 返回 `HTTP 429` 时，Bot 会自动退避重试三次。若某段文本受到模型内容
+限制而没有生成音频，Bot 会回退发送文字，日志会记录 MiMo 的结束原因。
 
 ---
 

@@ -37,8 +37,23 @@ $env:TTS_MODEL = [Environment]::GetEnvironmentVariable(
 $env:TTS_VOICE = [Environment]::GetEnvironmentVariable(
     "TTS_VOICE", "User"
 )
+$env:TTS_VOICE_NAME = [Environment]::GetEnvironmentVariable(
+    "TTS_VOICE_NAME", "User"
+)
+$env:TTS_VOICE_REFERENCE = [Environment]::GetEnvironmentVariable(
+    "TTS_VOICE_REFERENCE", "User"
+)
 $env:TTS_MAX_CHARS = [Environment]::GetEnvironmentVariable(
     "TTS_MAX_CHARS", "User"
+)
+$env:TTS_PLAYBACK_SPEED = [Environment]::GetEnvironmentVariable(
+    "TTS_PLAYBACK_SPEED", "User"
+)
+$env:TTS_DYNAMIC_STYLE = [Environment]::GetEnvironmentVariable(
+    "TTS_DYNAMIC_STYLE", "User"
+)
+$env:TTS_DIRECTOR_MODEL = [Environment]::GetEnvironmentVariable(
+    "TTS_DIRECTOR_MODEL", "User"
 )
 
 Set-Location -LiteralPath $scriptDir

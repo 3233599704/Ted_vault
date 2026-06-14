@@ -3,5 +3,7 @@
 .feishu-claude-sessions.json.tmp
 .feishu-voice-settings.json
 .feishu-voice-settings.json.tmp
+.feishu-bot-health.json
+.feishu-bot-health.json.tmp
 feishu-bot.stdout.log
 feishu-bot.stderr.log
