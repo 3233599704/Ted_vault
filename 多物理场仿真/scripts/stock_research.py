@@ -313,46 +313,86 @@ class EastmoneyPublicProvider:
 
     name = "东方财富公开行情（免安装备用通道，可能有延迟）"
 
-    def __init__(self, timeout: int = 20):
+    def __init__(self, timeout: int = 8):
         self.timeout = timeout
 
-    def _get_json(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
+    def _get_json(
+        self,
+        url: str,
+        params: dict[str, Any],
+        retries: int = 3,
+    ) -> dict[str, Any] | list[dict[str, Any]]:
         query = urllib.parse.urlencode(params)
-        request = urllib.request.Request(
-            f"{url}?{query}",
-            headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 Chrome/124 Safari/537.36"
-                ),
-                "Referer": "https://quote.eastmoney.com/",
-            },
+        referer = (
+            "https://finance.sina.com.cn/"
+            if "sina.com.cn" in url else "https://quote.eastmoney.com/"
         )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            raise RuntimeError(f"公开行情接口连接失败：{exc}") from exc
-        if not isinstance(payload, dict):
+        last_error: Exception | None = None
+        for attempt in range(retries):
+            request = urllib.request.Request(
+                f"{url}?{query}",
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 Chrome/124 Safari/537.36"
+                    ),
+                    "Referer": referer,
+                    "Accept": "application/json,text/plain,*/*",
+                    "Accept-Language": "zh-CN,zh;q=0.9",
+                    "Connection": "close",
+                },
+            )
+            try:
+                with urllib.request.urlopen(
+                    request,
+                    timeout=self.timeout,
+                ) as response:
+                    raw = response.read()
+                try:
+                    text = raw.decode("utf-8")
+                except UnicodeDecodeError:
+                    text = raw.decode("gb18030")
+                payload = json.loads(text)
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < retries - 1:
+                    time.sleep(attempt + 1)
+        else:
+            raise RuntimeError(f"公开行情接口连接失败：{last_error}") from last_error
+        if not isinstance(payload, (dict, list)):
             raise RuntimeError("公开行情接口返回格式异常")
         return payload
 
     def market_snapshot(self) -> list[dict[str, Any]]:
-        payload = self._get_json(
+        params = {
+            "pn": 1,
+            "pz": 6000,
+            "po": 1,
+            "np": 1,
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": 2,
+            "invt": 2,
+            "fid": "f3",
+            "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+            "fields": "f12,f14,f2,f3,f5,f6,f8,f10,f9,f23",
+        }
+        diff = []
+        for url in (
             "https://82.push2.eastmoney.com/api/qt/clist/get",
-            {
-                "pn": 1,
-                "pz": 6000,
-                "po": 1,
-                "np": 1,
-                "fltt": 2,
-                "invt": 2,
-                "fid": "f3",
-                "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
-                "fields": "f12,f14,f2,f3,f5,f6,f8,f10,f9,f23",
-            },
-        )
-        diff = (payload.get("data") or {}).get("diff") or []
+            "https://push2.eastmoney.com/api/qt/clist/get",
+            "http://82.push2.eastmoney.com/api/qt/clist/get",
+        ):
+            try:
+                payload = self._get_json(url, params, retries=1)
+                if isinstance(payload, dict):
+                    diff = (payload.get("data") or {}).get("diff") or []
+                if diff:
+                    break
+            except RuntimeError:
+                continue
+        if not diff:
+            return self._sina_market_snapshot()
         result = []
         for row in diff:
             result.append(
@@ -371,25 +411,74 @@ class EastmoneyPublicProvider:
             )
         return result
 
+    def _sina_market_snapshot(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        page_size = 100
+        for page in range(1, 80):
+            try:
+                payload = self._get_json(
+                    (
+                        "http://vip.stock.finance.sina.com.cn/quotes_service/"
+                        "api/json_v2.php/Market_Center.getHQNodeData"
+                    ),
+                    {
+                        "page": page,
+                        "num": page_size,
+                        "sort": "symbol",
+                        "asc": 1,
+                        "node": "hs_a",
+                        "symbol": "",
+                    },
+                )
+            except RuntimeError:
+                if rows:
+                    break
+                raise
+            page_rows = payload if isinstance(payload, list) else []
+            if not page_rows:
+                break
+            rows.extend(page_rows)
+            if len(page_rows) < page_size:
+                break
+            time.sleep(0.2)
+        return [
+            {
+                "代码": row.get("code") or str(row.get("symbol", ""))[-6:],
+                "名称": row.get("name"),
+                "最新价": row.get("trade"),
+                "涨跌幅": row.get("changepercent"),
+                "成交量": row.get("volume"),
+                "成交额": row.get("amount"),
+                "换手率": row.get("turnoverratio"),
+                "量比": 1,
+                "市盈率-动态": row.get("per"),
+                "市净率": row.get("pb"),
+            }
+            for row in rows
+        ]
+
     @staticmethod
     def _market_id(code: str) -> str:
         return "1" if code.startswith(("5", "6", "9")) else "0"
 
     def history(self, code: str, start: date, end: date) -> list[dict[str, Any]]:
-        payload = self._get_json(
-            "https://push2his.eastmoney.com/api/qt/stock/kline/get",
-            {
-                "secid": f"{self._market_id(code)}.{code}",
-                "klt": 101,
-                "fqt": 1,
-                "lmt": 500,
-                "end": end.strftime("%Y%m%d"),
-                "iscca": 1,
-                "fields1": "f1,f2,f3,f4,f5,f6",
-                "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
-            },
-        )
-        klines = (payload.get("data") or {}).get("klines") or []
+        try:
+            payload = self._get_json(
+                "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+                {
+                    "secid": f"{self._market_id(code)}.{code}",
+                    "klt": 101,
+                    "fqt": 1,
+                    "lmt": 500,
+                    "end": end.strftime("%Y%m%d"),
+                    "iscca": 1,
+                    "fields1": "f1,f2,f3,f4,f5,f6",
+                    "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+                },
+            )
+            klines = (payload.get("data") or {}).get("klines") or []
+        except RuntimeError:
+            return self._sina_history(code, start)
         result = []
         for line in klines:
             values = str(line).split(",")
@@ -404,6 +493,56 @@ class EastmoneyPublicProvider:
                     "最低": values[4],
                     "成交量": values[5],
                     "成交额": values[6],
+                }
+            )
+        return result
+
+    def _sina_history(self, code: str, start: date) -> list[dict[str, Any]]:
+        market = "sh" if code.startswith(("5", "6", "9")) else "sz"
+        query = urllib.parse.urlencode(
+            {
+                "symbol": f"{market}{code}",
+                "scale": 240,
+                "ma": "no",
+                "datalen": 500,
+            }
+        )
+        request = urllib.request.Request(
+            (
+                "http://quotes.sina.cn/cn/api/jsonp_v2.php/"
+                f"var%20_stock_data=/CN_MarketDataService.getKLineData?{query}"
+            ),
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 Chrome/124 Safari/537.36"
+                ),
+                "Referer": "https://finance.sina.com.cn/",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                raw = response.read().decode("utf-8", errors="replace")
+            start_index = raw.find("([")
+            end_index = raw.rfind("]);")
+            if start_index < 0 or end_index < 0:
+                raise ValueError("JSONP 格式异常")
+            rows = json.loads(raw[start_index + 1:end_index + 1])
+        except Exception as exc:
+            raise RuntimeError(f"备用历史行情接口连接失败：{exc}") from exc
+        result = []
+        for row in rows:
+            day = str(row.get("day") or "")
+            if day < start.isoformat():
+                continue
+            result.append(
+                {
+                    "日期": day,
+                    "开盘": row.get("open"),
+                    "收盘": row.get("close"),
+                    "最高": row.get("high"),
+                    "最低": row.get("low"),
+                    "成交量": row.get("volume"),
                 }
             )
         return result
@@ -486,10 +625,12 @@ class StockResearchService:
         provider: StockDataProvider | None = None,
         cache_seconds: int = 4 * 60 * 60,
         shortlist_size: int = 35,
+        minimum_market_size: int = 3000,
     ):
         self.provider = provider or AutoStockDataProvider()
         self.cache_seconds = cache_seconds
         self.shortlist_size = shortlist_size
+        self.minimum_market_size = minimum_market_size
         self._lock = threading.Lock()
         self._market_cache: tuple[float, date, list[StockAnalysis]] | None = None
         self._snapshot_cache: tuple[float, dict[str, dict[str, Any]]] | None = None
@@ -515,8 +656,10 @@ class StockResearchService:
             for row in rows
             if normalize_stock_code(self._snapshot_code(row))
         }
-        if not result:
-            raise RuntimeError("全市场行情为空，已停止本次筛选")
+        if len(result) < self.minimum_market_size:
+            raise RuntimeError(
+                f"全市场行情只取得 {len(result)} 只，数据不完整，已停止本次筛选"
+            )
         self._snapshot_cache = (now, result)
         return result
 

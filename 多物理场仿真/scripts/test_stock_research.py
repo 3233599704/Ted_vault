@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
 from stock_research import (
+    EastmoneyPublicProvider,
     StockResearchService,
     WatchlistStore,
     extract_stock_codes,
@@ -118,6 +119,33 @@ class StockCodeTests(unittest.TestCase):
         )
 
 
+class PublicProviderTests(unittest.TestCase):
+    def test_snapshot_uses_sina_when_eastmoney_is_unavailable(self):
+        class Provider(EastmoneyPublicProvider):
+            def _get_json(self, url, params, retries=3):
+                if "eastmoney.com" in url:
+                    raise RuntimeError("simulated outage")
+                return [
+                    {
+                        "symbol": "sh600519",
+                        "code": "600519",
+                        "name": "贵州茅台",
+                        "trade": "1500.00",
+                        "changepercent": "1.20",
+                        "volume": "1000",
+                        "amount": "200000000",
+                        "turnoverratio": "0.50",
+                        "per": "25.00",
+                        "pb": "8.00",
+                    }
+                ]
+
+        rows = Provider().market_snapshot()
+        self.assertEqual(rows[0]["代码"], "600519")
+        self.assertEqual(rows[0]["名称"], "贵州茅台")
+        self.assertEqual(rows[0]["最新价"], "1500.00")
+
+
 class WatchlistTests(unittest.TestCase):
     def test_add_remove_duplicate_and_user_isolation(self):
         memory = {}
@@ -143,6 +171,7 @@ class ResearchTests(unittest.TestCase):
             provider=FakeProvider(),
             cache_seconds=60,
             shortlist_size=10,
+            minimum_market_size=1,
         )
 
     def test_market_screen_filters_risk_and_survives_one_failure(self):
