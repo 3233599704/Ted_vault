@@ -110,8 +110,14 @@ status: draft
 ### 可视化（Cell 12）
 
 两张三合一对比图：
-- `eval_retrieval_chart.png`：检索指标对比 + 耗时对比 + 综合得分
-- `eval_generation_chart.png`：LLM-as-Judge 四维打分
+
+![[多物理场仿真/raw/模型训练/6_12/eval_retrieval_chart.png]]
+
+*检索指标对比 + 耗时对比 + 综合得分*
+
+![[多物理场仿真/raw/模型训练/6_12/eval_generation_chart.png]]
+
+*LLM-as-Judge 四维打分：Faithfulness / Relevance / Correctness / Completeness*
 
 ---
 
