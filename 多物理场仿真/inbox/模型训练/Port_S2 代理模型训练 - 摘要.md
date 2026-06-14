@@ -7,7 +7,7 @@ tags:
   - 软件操作
 source: "[[raw/模型训练/6_10文件/2026-06-10_正向与逆向模型训练记录_Port_S2.md]]"
 created: 2026-06-10
-status: draft
+status: reviewed
 ---
 
 # Port_S2 代理模型训练 — 摘要

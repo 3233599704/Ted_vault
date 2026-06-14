@@ -6,7 +6,7 @@ tags:
   - COMSOL
 source: "[[raw/EDA/COMSOL_安装日志_2026-06-09.md]]"
 created: 2026-06-09
-status: draft
+status: reviewed
 ---
 
 # COMSOL 6.4 安装日志 — 摘要
