@@ -8,7 +8,7 @@ tags:
   - Obsidian
 source: "[[raw/飞书-Claude-Obsidian-Bot-构建复盘与复现日志.md]]"
 created: 2026-06-14
-status: draft
+status: reviewed
 ---
 
 # 飞书 Bot 构建复盘 — 摘要

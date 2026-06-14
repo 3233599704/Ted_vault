@@ -7,7 +7,7 @@ tags:
   - LLM
 source: "[[raw/模型训练/6_12/daily_2025-06-12.md]]"
 created: 2026-06-12
-status: draft
+status: reviewed
 ---
 
 # RAG Agent 搭建与评测 — 摘要
