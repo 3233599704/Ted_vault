@@ -1570,14 +1570,6 @@ def _watch_stock_reports() -> None:
         f"[Stock] 收盘报告时间 {STOCK_REPORT_HOUR:02d}:{STOCK_REPORT_MINUTE:02d} "
         f"{STOCK_TIMEZONE} | 目标用户: {len(notify_users)}"
     )
-    try:
-        identity = STOCK_SERVICE.stock_identity("600519")
-        if identity:
-            log(f"[Stock] 行情数据源可用: {STOCK_SERVICE.provider.name}")
-        else:
-            log("[Stock] 行情代码表已返回，但未找到自检代码 600519")
-    except Exception as e:
-        log(f"[Stock] 行情数据源启动自检失败: {type(e).__name__}: {e}")
     while True:
         now = datetime.now(stock_timezone)
         try:

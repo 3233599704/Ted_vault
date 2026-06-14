@@ -311,7 +311,7 @@ class AkshareProvider:
 class EastmoneyPublicProvider:
     """Dependency-free fallback for core quotes and price history."""
 
-    name = "东方财富公开行情（免安装备用通道，可能有延迟）"
+    name = "公开行情备用通道（东方财富/新浪，可能有延迟）"
 
     def __init__(self, timeout: int = 8):
         self.timeout = timeout
