@@ -491,7 +491,7 @@ class StockResearchService:
         self.cache_seconds = cache_seconds
         self.shortlist_size = shortlist_size
         self._lock = threading.Lock()
-        self._market_cache: tuple[float, list[StockAnalysis]] | None = None
+        self._market_cache: tuple[float, date, list[StockAnalysis]] | None = None
         self._snapshot_cache: tuple[float, dict[str, dict[str, Any]]] | None = None
         self._financial_cache: tuple[date, dict[str, dict[str, Any]]] | None = None
         self._notice_cache: tuple[date, dict[str, list[str]]] | None = None
@@ -781,12 +781,24 @@ class StockResearchService:
             notices.get(code, []),
         )
 
-    def screen_market(self, today: date | None = None) -> list[StockAnalysis]:
+    def screen_market(
+        self,
+        today: date | None = None,
+        force_refresh: bool = False,
+    ) -> list[StockAnalysis]:
         today = today or date.today()
         now = time.time()
         with self._lock:
-            if self._market_cache and now - self._market_cache[0] < self.cache_seconds:
-                return list(self._market_cache[1])
+            if force_refresh:
+                self._market_cache = None
+                self._snapshot_cache = None
+                self._notice_cache = None
+            if (
+                self._market_cache
+                and self._market_cache[1] == today
+                and now - self._market_cache[0] < self.cache_seconds
+            ):
+                return list(self._market_cache[2])
 
             snapshot = self._snapshot()
             eligible = [
@@ -815,7 +827,7 @@ class StockResearchService:
                 except Exception:
                     continue
             analyses.sort(key=lambda item: item.score, reverse=True)
-            self._market_cache = (now, analyses)
+            self._market_cache = (now, today, analyses)
             return list(analyses)
 
     def analyze_codes(
@@ -910,8 +922,16 @@ class StockResearchService:
         )
         return "\n".join(lines)
 
-    def market_report(self, today: date | None = None, limit: int = 5) -> str:
-        return self.format_market_report(self.screen_market(today), limit)
+    def market_report(
+        self,
+        today: date | None = None,
+        limit: int = 5,
+        force_refresh: bool = False,
+    ) -> str:
+        return self.format_market_report(
+            self.screen_market(today, force_refresh=force_refresh),
+            limit,
+        )
 
     def code_report(self, codes: list[str], today: date | None = None) -> str:
         analyses, errors = self.analyze_codes(codes, today)

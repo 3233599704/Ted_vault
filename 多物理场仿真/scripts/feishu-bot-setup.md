@@ -263,7 +263,8 @@ py -m pip install akshare
 
 如果已经配置 `FEISHU_ALLOWED_USERS` 或 `FEISHU_NOTIFY_USERS`，股票日报会在
 没有单独设置 `FEISHU_STOCK_NOTIFY_USERS` 时复用它们。配置后重启
-`FeishuClaudeBot`。
+`FeishuClaudeBot`。三项都未配置时，Bot 会把已经和它建立过会话的飞书用户
+作为默认接收人。
 
 飞书命令：
 

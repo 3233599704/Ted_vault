@@ -1549,13 +1549,15 @@ def _watch_stock_reports() -> None:
         os.environ.get("FEISHU_STOCK_NOTIFY_USERS", "")
         or os.environ.get("FEISHU_NOTIFY_USERS", "")
     )
-    notify_users = (
+    configured_users = (
         [value.strip() for value in notify_env.split(",") if value.strip()]
         if notify_env else ALLOWED_USERS
     )
-    if not notify_users:
-        log("[Stock] 未配置通知用户，仅保留手动查询功能")
-        return
+    notify_users = list(dict.fromkeys(configured_users or SESSIONS.keys()))
+    if not configured_users and notify_users:
+        log(f"[Stock] 使用 {len(notify_users)} 位已有会话用户作为日报接收人")
+    elif not notify_users:
+        log("[Stock] 暂无通知用户；建立飞书会话后会自动成为日报接收人")
     try:
         timezone = ZoneInfo(STOCK_TIMEZONE)
     except ZoneInfoNotFoundError:
@@ -1581,8 +1583,15 @@ def _watch_stock_reports() -> None:
             )
             if due and _time_module.time() - last_attempt_at >= 15 * 60:
                 last_attempt_at = _time_module.time()
+                if not notify_users:
+                    notify_users = list(SESSIONS.keys())
+                    if not notify_users:
+                        continue
                 log(f"[Stock] 开始生成 {now.date()} 全市场收盘报告")
-                report = STOCK_SERVICE.market_report(today=now.date())
+                report = STOCK_SERVICE.market_report(
+                    today=now.date(),
+                    force_refresh=True,
+                )
                 sent = False
                 for user_id in notify_users:
                     sent = _send_proactive_msg(user_id, report) or sent

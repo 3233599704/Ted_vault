@@ -36,6 +36,7 @@ class FakeProvider:
     name = "固定测试数据"
 
     def __init__(self):
+        self.snapshot_calls = 0
         self.snapshots = [
             {
                 "代码": "600001",
@@ -77,6 +78,7 @@ class FakeProvider:
         }
 
     def market_snapshot(self):
+        self.snapshot_calls += 1
         return self.snapshots
 
     def history(self, code, start, end):
@@ -166,6 +168,13 @@ class ResearchTests(unittest.TestCase):
     def test_trading_calendar(self):
         self.assertTrue(self.service.is_trading_day(date(2026, 6, 15)))
         self.assertFalse(self.service.is_trading_day(date(2026, 6, 14)))
+
+    def test_close_report_can_force_fresh_market_data(self):
+        self.service.market_report(date(2026, 6, 15))
+        self.service.market_report(date(2026, 6, 15))
+        self.assertEqual(self.service.provider.snapshot_calls, 1)
+        self.service.market_report(date(2026, 6, 15), force_refresh=True)
+        self.assertEqual(self.service.provider.snapshot_calls, 2)
 
 
 class SchedulerTests(unittest.TestCase):
