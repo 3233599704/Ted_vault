@@ -29,6 +29,7 @@ import wave
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Windows 控制台 UTF-8
 if sys.platform == "win32":
@@ -40,6 +41,13 @@ from lark_oapi.api.im.v1 import (
     CreateMessageRequest, CreateMessageRequestBody,
     CreateFileRequest, CreateFileRequestBody,
     GetMessageResourceRequest,
+)
+from stock_research import (
+    StockResearchService,
+    WatchlistStore,
+    extract_stock_codes,
+    is_report_due,
+    normalize_stock_code,
 )
 
 # ============================================================
@@ -67,7 +75,25 @@ LOCK_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-bot.lock")
 SESSION_FILE = os.path.join(SCRIPT_DIR, ".feishu-claude-sessions.json")
 VOICE_SETTINGS_FILE = os.path.join(SCRIPT_DIR, ".feishu-voice-settings.json")
 HEALTH_FILE = os.path.join(SCRIPT_DIR, ".feishu-bot-health.json")
+STOCK_WATCHLIST_FILE = os.path.join(SCRIPT_DIR, ".feishu-stock-watchlists.json")
+STOCK_REPORT_STATE_FILE = os.path.join(
+    SCRIPT_DIR,
+    ".feishu-stock-report-state.json",
+)
 IMAGE_SAVE_DIR = os.path.join(VAULT_PATH, "多物理场仿真", "raw", "图片")
+STOCK_ENABLED = (
+    os.environ.get("STOCK_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+)
+STOCK_REPORT_TIME = os.environ.get("STOCK_REPORT_TIME", "15:30")
+STOCK_TIMEZONE = os.environ.get("STOCK_TIMEZONE", "Asia/Shanghai")
+try:
+    STOCK_REPORT_HOUR, STOCK_REPORT_MINUTE = (
+        int(part) for part in STOCK_REPORT_TIME.split(":", 1)
+    )
+    if not (0 <= STOCK_REPORT_HOUR <= 23 and 0 <= STOCK_REPORT_MINUTE <= 59):
+        raise ValueError
+except ValueError:
+    STOCK_REPORT_HOUR, STOCK_REPORT_MINUTE = 15, 30
 VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "anthropic").lower()
 VISION_API_KEY = os.environ.get("VISION_API_KEY", "")
 VISION_API_URL = os.environ.get("VISION_API_URL", "")
@@ -208,6 +234,9 @@ CLAUDE_RUN_LOCK = threading.Lock()
 SESSION_LOCK = threading.Lock()
 VOICE_SETTINGS_LOCK = threading.Lock()
 HEALTH_LOCK = threading.Lock()
+STOCK_REPORT_STATE_LOCK = threading.Lock()
+STOCK_SERVICE = StockResearchService()
+STOCK_WATCHLISTS = WatchlistStore(STOCK_WATCHLIST_FILE)
 WS_HEALTH = {
     "state": "starting",
     "state_since": _time_module.time(),
@@ -1050,6 +1079,94 @@ def analyze_image_with_vision_api(path: str) -> str:
 # ============================================================
 
 
+def _stock_help_text() -> str:
+    return (
+        "A 股模拟研究命令：\n"
+        "/stock report：查看今天的全市场模拟关注名单\n"
+        "/stock 600519：查看指定股票，单次最多 5 只\n"
+        "/watch add 600519：加入个人观察列表\n"
+        "/watch remove 600519：移出观察列表\n"
+        "/watch list：查看观察列表\n\n"
+        "也可以直接问：今天有哪些股票值得关注？或：看看 600519。\n"
+        "股票报告固定使用文字，仅供模拟盘学习，不构成真实交易建议。"
+    )
+
+
+def _is_market_stock_request(text: str) -> bool:
+    lowered = text.lower()
+    phrases = (
+        "哪些股票", "什么股票值得", "股票值得入手", "股票值得关注",
+        "模拟盘选股", "今日选股", "今天选股", "收盘股票报告",
+        "股票收盘报告", "股票报告",
+    )
+    return any(phrase in lowered for phrase in phrases)
+
+
+def handle_stock_request(sender_id: str, text: str) -> tuple[bool, str]:
+    """Return whether the text is a stock request and its plain-text reply."""
+    normalized = text.strip()
+    lowered = normalized.lower()
+    is_stock_command = lowered == "/stock" or lowered.startswith("/stock ")
+    is_watch_command = lowered == "/watch" or lowered.startswith("/watch ")
+    natural_codes = extract_stock_codes(normalized, require_context=True)
+    market_request = _is_market_stock_request(normalized)
+    if not (is_stock_command or is_watch_command or natural_codes or market_request):
+        return False, ""
+    if not STOCK_ENABLED:
+        return True, "股票研究功能当前已关闭。设置 STOCK_ENABLED=true 后重启 Bot。"
+
+    try:
+        if is_watch_command:
+            parts = normalized.split()
+            if len(parts) == 1 or (len(parts) == 2 and parts[1].lower() == "list"):
+                values = STOCK_WATCHLISTS.list(sender_id)
+                if not values:
+                    return True, "你的个人观察列表还是空的。使用 /watch add 600519 添加。"
+                return True, "你的个人观察列表：\n" + "\n".join(
+                    f"{index}. {code}" for index, code in enumerate(values, 1)
+                )
+            if len(parts) != 3 or parts[1].lower() not in {"add", "remove"}:
+                return True, _stock_help_text()
+            code = normalize_stock_code(parts[2])
+            if not code:
+                return True, "没有识别到有效的 A 股六位代码。"
+            if parts[1].lower() == "add":
+                identity = STOCK_SERVICE.stock_identity(code)
+                if not identity:
+                    return True, f"没有在当前 A 股代码表中找到 {code}。"
+                if len(STOCK_WATCHLISTS.list(sender_id)) >= 30:
+                    return True, "个人观察列表最多保存 30 只股票。"
+                added = STOCK_WATCHLISTS.add(sender_id, code)
+                state = "已加入" if added else "已经在"
+                return True, f"{identity[1]}（{code}）{state}你的个人观察列表。"
+            removed = STOCK_WATCHLISTS.remove(sender_id, code)
+            return True, (
+                f"{code} 已移出个人观察列表。"
+                if removed else f"{code} 不在你的个人观察列表中。"
+            )
+
+        if lowered in {"/stock", "/stock help"}:
+            return True, _stock_help_text()
+        if lowered in {"/stock report", "/stock market"} or market_request:
+            return True, STOCK_SERVICE.market_report()
+
+        if is_stock_command:
+            codes = extract_stock_codes(normalized[6:], require_context=False)
+        else:
+            codes = natural_codes
+        if not codes:
+            return True, "没有识别到有效的 A 股六位代码。\n\n" + _stock_help_text()
+        if len(codes) > 5:
+            return True, "单次最多分析 5 只股票，请缩小范围后再试。"
+        return True, STOCK_SERVICE.code_report(codes)
+    except Exception as e:
+        log(f"[Stock] 请求失败: {type(e).__name__}: {e}")
+        return True, (
+            f"股票数据暂时没有取到：{e}\n"
+            "本次不会用猜测值补全，请稍后再试。"
+        )
+
+
 def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
     """Run Claude outside the WebSocket callback so heartbeats stay responsive."""
     try:
@@ -1063,6 +1180,11 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
         normalized = user_text.strip()
         lower_text = normalized.lower()
         force_voice = False
+
+        stock_handled, stock_reply = handle_stock_request(sender_id, normalized)
+        if stock_handled:
+            reply_text_message(msg_id, clean_reply(stock_reply))
+            return
 
         if lower_text == "/voice on":
             VOICE_SETTINGS[sender_id] = True
@@ -1290,9 +1412,10 @@ def _save_distill_notified(notified: set[str]) -> None:
     os.replace(temp, DISTILL_NOTIFIED_FILE)
 
 
-def _send_proactive_msg(open_id: str, text: str) -> None:
+def _send_proactive_msg(open_id: str, text: str) -> bool:
     """Send a direct message (not a reply) to a user via Feishu API."""
     try:
+        text = markdown_to_feishu_text(clean_reply(text))
         body = CreateMessageRequestBody.builder() \
             .receive_id(open_id) \
             .msg_type("text") \
@@ -1309,8 +1432,11 @@ def _send_proactive_msg(open_id: str, text: str) -> None:
             .im.v1.message.create(req)
         if not resp.success():
             log(f"[Watchdog] 通知失败 {open_id[-8:]}: code={resp.code}")
+            return False
+        return True
     except Exception as e:
         log(f"[Watchdog] 通知异常: {e}")
+        return False
 
 
 def _summarize_daily_report(report_path: str, fname: str) -> str:
@@ -1395,6 +1521,86 @@ def _watch_daily_distill() -> None:
 
         _time_module.sleep(60)
 
+
+def _load_stock_report_state() -> dict:
+    with STOCK_REPORT_STATE_LOCK:
+        try:
+            with open(STOCK_REPORT_STATE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else {}
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return {}
+
+
+def _save_stock_report_state(state: dict) -> None:
+    temp = STOCK_REPORT_STATE_FILE + ".tmp"
+    with STOCK_REPORT_STATE_LOCK:
+        with open(temp, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        os.replace(temp, STOCK_REPORT_STATE_FILE)
+
+
+def _watch_stock_reports() -> None:
+    """Push one A-share market report after the configured close time."""
+    if not STOCK_ENABLED:
+        log("[Stock] 股票研究功能已关闭")
+        return
+    notify_env = (
+        os.environ.get("FEISHU_STOCK_NOTIFY_USERS", "")
+        or os.environ.get("FEISHU_NOTIFY_USERS", "")
+    )
+    notify_users = (
+        [value.strip() for value in notify_env.split(",") if value.strip()]
+        if notify_env else ALLOWED_USERS
+    )
+    if not notify_users:
+        log("[Stock] 未配置通知用户，仅保留手动查询功能")
+        return
+    try:
+        timezone = ZoneInfo(STOCK_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        log(f"[Stock] 未找到时区 {STOCK_TIMEZONE}，改用 Asia/Shanghai")
+        timezone = ZoneInfo("Asia/Shanghai")
+
+    state = _load_stock_report_state()
+    last_attempt_at = 0.0
+    log(
+        f"[Stock] 收盘报告时间 {STOCK_REPORT_HOUR:02d}:{STOCK_REPORT_MINUTE:02d} "
+        f"{STOCK_TIMEZONE} | 目标用户: {len(notify_users)}"
+    )
+    while True:
+        now = datetime.now(timezone)
+        try:
+            trading_day = STOCK_SERVICE.is_trading_day(now.date())
+            due = is_report_due(
+                now,
+                STOCK_REPORT_HOUR,
+                STOCK_REPORT_MINUTE,
+                str(state.get("last_sent_date") or ""),
+                trading_day,
+            )
+            if due and _time_module.time() - last_attempt_at >= 15 * 60:
+                last_attempt_at = _time_module.time()
+                log(f"[Stock] 开始生成 {now.date()} 全市场收盘报告")
+                report = STOCK_SERVICE.market_report(today=now.date())
+                sent = False
+                for user_id in notify_users:
+                    sent = _send_proactive_msg(user_id, report) or sent
+                    _time_module.sleep(0.5)
+                if sent:
+                    state = {
+                        "last_sent_date": now.date().isoformat(),
+                        "sent_at": now.isoformat(),
+                    }
+                    _save_stock_report_state(state)
+                    log(f"[Stock] {now.date()} 收盘报告已发送")
+                else:
+                    log("[Stock] 收盘报告发送失败，15 分钟后重试")
+        except Exception as e:
+            log(f"[Stock] 收盘报告异常: {type(e).__name__}: {e}")
+        _time_module.sleep(60)
+
+
 # ============================================================
 # 主入口
 # ============================================================
@@ -1462,6 +1668,12 @@ def main():
         target=_watch_daily_distill,
         daemon=True,
         name="distill-watchdog",
+    ).start()
+
+    threading.Thread(
+        target=_watch_stock_reports,
+        daemon=True,
+        name="stock-report-watchdog",
     ).start()
 
     log("[OK] Feishu Bot started, waiting for messages...")

@@ -5,5 +5,9 @@
 .feishu-voice-settings.json.tmp
 .feishu-bot-health.json
 .feishu-bot-health.json.tmp
+.feishu-stock-watchlists.json
+.feishu-stock-watchlists.json.tmp
+.feishu-stock-report-state.json
+.feishu-stock-report-state.json.tmp
 feishu-bot.stdout.log
 feishu-bot.stderr.log

@@ -13,6 +13,24 @@ $env:FEISHU_APP_ID = [Environment]::GetEnvironmentVariable(
 $env:FEISHU_APP_SECRET = [Environment]::GetEnvironmentVariable(
     "FEISHU_APP_SECRET", "User"
 )
+$env:FEISHU_ALLOWED_USERS = [Environment]::GetEnvironmentVariable(
+    "FEISHU_ALLOWED_USERS", "User"
+)
+$env:FEISHU_NOTIFY_USERS = [Environment]::GetEnvironmentVariable(
+    "FEISHU_NOTIFY_USERS", "User"
+)
+$env:FEISHU_STOCK_NOTIFY_USERS = [Environment]::GetEnvironmentVariable(
+    "FEISHU_STOCK_NOTIFY_USERS", "User"
+)
+$env:STOCK_ENABLED = [Environment]::GetEnvironmentVariable(
+    "STOCK_ENABLED", "User"
+)
+$env:STOCK_REPORT_TIME = [Environment]::GetEnvironmentVariable(
+    "STOCK_REPORT_TIME", "User"
+)
+$env:STOCK_TIMEZONE = [Environment]::GetEnvironmentVariable(
+    "STOCK_TIMEZONE", "User"
+)
 $env:VISION_PROVIDER = [Environment]::GetEnvironmentVariable(
     "VISION_PROVIDER", "User"
 )
