@@ -246,6 +246,10 @@ MESSAGE_EXECUTOR = ThreadPoolExecutor(
     max_workers=1,
     thread_name_prefix="feishu-message",
 )
+STOCK_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="stock-report",
+)
 
 # 消息去重（飞书可能对同一消息推送多次）
 SEEN_MESSAGES = set()
@@ -1102,6 +1106,31 @@ def _is_market_stock_request(text: str) -> bool:
     return any(phrase in lowered for phrase in phrases)
 
 
+def _is_market_report_request(text: str) -> bool:
+    lowered = text.strip().lower()
+    return lowered in {"/stock report", "/stock market"} or _is_market_stock_request(text)
+
+
+def _generate_stock_report(sender_id: str, msg_id: str) -> None:
+    started = _time_module.time()
+    try:
+        log(f"[Stock] 开始处理手动全市场报告: {sender_id[-8:]}")
+        report = STOCK_SERVICE.market_report()
+        elapsed = _time_module.time() - started
+        log(f"[Stock] 手动全市场报告完成: {elapsed:.1f}s")
+        if not _send_proactive_msg(sender_id, report):
+            reply_text_message(msg_id, report)
+    except Exception as e:
+        elapsed = _time_module.time() - started
+        log(f"[Stock] 手动报告失败 {elapsed:.1f}s: {type(e).__name__}: {e}")
+        message = (
+            f"这次股票扫描没有完成：{e}\n"
+            "我没有使用不完整数据给你凑名单。你可以稍后再发 /stock report。"
+        )
+        if not _send_proactive_msg(sender_id, message):
+            reply_text_message(msg_id, message)
+
+
 def handle_stock_request(sender_id: str, text: str) -> tuple[bool, str]:
     """Return whether the text is a stock request and its plain-text reply."""
     normalized = text.strip()
@@ -1180,6 +1209,18 @@ def process_text_message(sender_id: str, msg_id: str, user_text: str) -> None:
         normalized = user_text.strip()
         lower_text = normalized.lower()
         force_voice = False
+
+        if _is_market_report_request(normalized):
+            if not STOCK_ENABLED:
+                reply_text_message(msg_id, "股票研究功能当前已关闭。")
+                return
+            reply_text_message(
+                msg_id,
+                "收到，正在扫描 A 股市场。公开行情接口有时较慢，通常需要几分钟；"
+                "完成后我会主动把名单发给你，这期间可以继续和我聊天。",
+            )
+            STOCK_EXECUTOR.submit(_generate_stock_report, sender_id, msg_id)
+            return
 
         stock_handled, stock_reply = handle_stock_request(sender_id, normalized)
         if stock_handled:

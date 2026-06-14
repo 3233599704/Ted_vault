@@ -16,6 +16,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -624,7 +625,7 @@ class StockResearchService:
         self,
         provider: StockDataProvider | None = None,
         cache_seconds: int = 4 * 60 * 60,
-        shortlist_size: int = 35,
+        shortlist_size: int = 15,
         minimum_market_size: int = 3000,
     ):
         self.provider = provider or AutoStockDataProvider()
@@ -956,19 +957,27 @@ class StockResearchService:
             financials = self._financials(today)
             notices = self._notices(today)
             analyses: list[StockAnalysis] = []
-            for code, row in eligible[:self.shortlist_size]:
-                try:
-                    analyses.append(
-                        self._analyze_code(
-                            code,
-                            row,
-                            today,
-                            financials,
-                            notices,
-                        )
-                    )
-                except Exception:
-                    continue
+            candidates = eligible[:self.shortlist_size]
+            with ThreadPoolExecutor(
+                max_workers=min(6, len(candidates) or 1),
+                thread_name_prefix="stock-history",
+            ) as executor:
+                futures = {
+                    executor.submit(
+                        self._analyze_code,
+                        code,
+                        row,
+                        today,
+                        financials,
+                        notices,
+                    ): code
+                    for code, row in candidates
+                }
+                for future in as_completed(futures):
+                    try:
+                        analyses.append(future.result())
+                    except Exception:
+                        continue
             analyses.sort(key=lambda item: item.score, reverse=True)
             self._market_cache = (now, today, analyses)
             return list(analyses)

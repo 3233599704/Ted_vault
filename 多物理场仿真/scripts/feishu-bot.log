@@ -705,3 +705,9 @@ created
 [06-14 16:55:27] [Stock] 未找到时区 Asia/Shanghai，改用固定北京时间 UTC+8
 [06-14 16:55:27] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
 [06-14 19:54:04] 📩 50f8c6ee: /stock report
+[06-14 20:03:11] Claude Code 2.1.175 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[06-14 20:03:11] [Stock] 使用 1 位已有会话用户作为日报接收人
+[06-14 20:03:11] [OK] Feishu Bot started, waiting for messages...
+[06-14 20:03:11] [Stock] 未找到时区 Asia/Shanghai，改用固定北京时间 UTC+8
+[06-14 20:03:11] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[06-14 20:03:11] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
