@@ -1,0 +1,106 @@
+本周概要
+
+本周完成了 COMSOL/WavEDA 仿真工具的部署与上手、三个代理模型实验（从双参数到三参数、从 dB 域到线性域的全链路优化）、一个 RAG 检索系统的搭建与评测，以及飞书→Claude Code→Obsidian 自动化 Bot 的构建。同时在 Obsidian 中搭建了多物理场仿真知识库体系（raw→inbox→wiki→outputs 四阶段流水线）。
+
+——————————————
+
+任务完成情况
+
+序号  计划任务                    完成状况    完成内容与成果简述
+
+1     了解实习公司产品体系          ✅ 完成     通读 WavEDA EM-Multiphysics V2.0 产品文档：自研电磁/热/力学三套求解器，DC→THz 全覆盖，光学模块 51× 加速比。建立了产品知识 wiki 页。
+     所用工具方法：WavEDA 产品文档、Obsidian
+
+2     部署 COMSOL 仿真环境          ✅ 完成     安装 COMSOL Multiphysics 6.4，完成环境部署。记录安装路径、许可证、目录结构，归档为可复用安装日志。
+     所用工具方法：COMSOL 6.4、Windows
+
+3     COMSOL 天线仿真实操           ✅ 完成     跟 B站教程完成微带矩形贴片天线 COMSOL 仿真全流程（几何→材料→物理场→边界→网格→求解）。扫参因内存限制中断，建模部分独立完成，结果截图归档。
+     所用工具方法：COMSOL、B站 BV1dT411z7Fm
+
+4     代理模型 baseline 建立        ✅ 完成     首个代理模型实验（Backfeed_Data300）：4 参数（sx/sy/sl/sw）300 样本，正向 PCA+MLP 模型验证 MAE 0.39 dB，逆向 Tandem 模型回代 MAE 0.45 dB，发现逆向多解性问题并实现多候选搜索。
+     所用工具方法：Python/PyTorch、PCA、Tandem 架构
+
+5     WavEDA 建模 + 代理模型训练    ✅ 完成     在 WavEDA 中自建微带天线参数化模型（l3×w4 双参数扫参），导出 Touchstone → Excel 转换 → PyTorch 正向代理模型训练。72 样本下正向 MAE 0.72 dB，逆向 Tandem 模型回代 MAE 0.83 dB，多候选搜索 Top-10 召回率 89%。
+     所用工具方法：WavEDA、Python/PyTorch、PCA、Tandem 架构
+
+6     线性域优化 + Loss 消融        ✅ 完成     三参数（l3×w4×h）576 样本全流程实验：对比 dB 域与线性域训练效果，线性域 MAE 2.5× 提升（0.25→0.10 dB）；7 种 Loss 函数对比，MAPE 最优；4 项消融实验，模型集成 MAE 降 34%。封装一键 pipeline 脚本 run_s11_pipeline.py --linear。
+     所用工具方法：Python/PyTorch、PCA、线性域、MAPE Loss、模型集成
+
+7     RAG 检索系统搭建与评测        ✅ 完成     搭建本地 RAG 知识库对话系统：DeepSeek-V3 + BGE 嵌入 + FAISS + BM25 + CrossEncoder 重排。实现 5 种检索策略对比评测，最佳生成质量 0.909（Multi-Query+RRF）。发现 CrossEncoder 精排反而降低生成质量的反直觉现象。
+     所用工具方法：DeepSeek-V3、LangChain、FAISS、BGE-reranker、LLM-as-Judge
+
+8     飞书 AI Bot 构建              ✅ 完成     构建飞书→Claude Code→Obsidian 自动化 Bot：WebSocket 长连接（无需公网 IP）、文字/图片/语音全支持、连续会话、8 种动态语音风格、断线自愈（240s 心跳监控+自动重启）、计划任务开机自启。已稳定运行。
+     所用工具方法：飞书开放平台、lark-oapi、Claude Code CLI、MiMo Vision/TTS、Python
+
+9     知识库体系建设                ✅ 完成     搭建 Obsidian 多物理场仿真知识库体系：raw→inbox→wiki→outputs 四阶段 LLM Wiki 流水线，覆盖电磁/热/光/EDA/模型训练/软件操作/小白问答/自动化 8 大板块，wiki 累计 32 页。配置 Templater 文件夹模板、Dataview 仪表盘、Codex 每日蒸馏自动化。
+     所用工具方法：Obsidian、Templater、Dataview、LLM Wiki 方法论、Codex
+
+——————————————
+
+收获、反思与困难
+
+【收获】
+
+- 代理模型从零到一：从 Backfeed_Data300（300 样本、4 参数）起步，到 Port_S2（自建 WavEDA 模型、72 样本），再到 Port_S3（576 样本、三参数），三次实验形成了一条完整的学习曲线。掌握了 PCA 压缩、Tandem 逆向架构、多候选搜索的核心方法。
+
+- 线性域是本周最大的技术发现：dB 域训练是之前的默认做法，本周通过受控对比实验确认线性域全面碾压（MAE 2.5× 提升）。这个发现直接改写了后续所有实验的默认配置。
+
+- 评测思维建立：RAG 检索评测中学到的"指标选对比调参重要"——CrossEncoder 精排提高 Recall 但降低生成质量，和 Loss 函数对比中 Huber/LogCosh 在线性域反效果是同一个教训。
+
+- 飞书 Bot 从能用变成好用：三天从基础链路做到语音+自愈+连续会话，最重要的是学会了"面向失败设计"——每层都有降级路径比单次跑通更重要。
+
+【反思】
+
+- 数据量是所有问题的根因：Port_S2 的 6 种优化尝试只有共振感知 Loss 有效，其他全失败——因为 72 样本下任何复杂方法都会过拟合。Port_S3 的 576 样本同样有优化瓶颈。加数据是最可靠的优化路径。
+
+- 不要盲目用"高级"方法：CNN Decoder 在 PCA 已无损时毫无价值，Freq-Aware Loss 在线性域下是多余的，Huber/LogCosh 把深谷信号当异常值压了。先用简单方法做对，再考虑复杂方法做好。
+
+- 知识库的价值在连接：32 页 wiki 之间的交叉链接比单页质量更重要。代理模型三篇形成学习曲线、Loss 函数页和 RAG 评测页共享同一个"指标选择"的教训——这种连接是搜索引擎给不了的。
+
+【困难】
+
+- COMSOL 扫参因内存不足中断，本地机器限制了仿真规模。后续大规模扫参必须依赖代理模型。
+- 飞书 Bot 的 PATH 问题折腾了很久——计划任务环境与交互式终端的差异导致的 FileNotFoundError 最终通过绝对路径绕开。
+- 微信 ClawBot 目前仅支持 iOS，Android 用户暂时无法直接接入。飞书是当前最优替代方案。
+
+——————————————
+
+下周计划与需求
+
+P0  加密训练数据       Port_S2 从 72→156+ 样本，Port_S3 从 576→800+ 样本，预期 MAE 降 20-30%
+P1  逆向候选闭环验证    将候选尺寸回 WavEDA/CST 做真实仿真，对比代理模型与真实曲线误差
+P1  模型集成落地        在 pipeline 中默认启用 3-seed Ensemble（MAE -34%，改一行代码）
+P2  RAG 系统扩展        BM25 修复后重跑评测，尝试 Milvus 替代 FAISS
+P2  飞书 Bot 完善       配置白名单、日志轮转、/health 命令、消息队列提示
+P3  微信接入调研        跟踪 Android 微信 ClawBot 开放进度
+
+需要支持：CST/HFSS 仿真 license 用于闭环验证；如有可能，申请更多 WavEDA 仿真机时用于加密采样。
+
+——————————————
+
+附件（本周相关 wiki 页面）
+
+1.  WavEDA 产品学习记录
+    文件路径：多物理场仿真\wiki\软件操作\WavEDA\WavEDA 索引.md
+2.  COMSOL 安装日志
+    文件路径：多物理场仿真\wiki\软件操作\COMSOL\2026-06-09 COMSOL 6.4 安装.md
+3.  微带贴片天线仿真实操
+    文件路径：多物理场仿真\wiki\软件操作\COMSOL\2026-06-10 微带贴片天线仿真.md
+4.  Backfeed_Data300 代理模型实验
+    文件路径：多物理场仿真\wiki\模型训练\电磁场代理模型.md
+5.  Port_S2 WavEDA+ML 全链路
+    文件路径：多物理场仿真\wiki\模型训练\微带天线 Port_S2 代理模型.md
+6.  线性域优化 + Loss 消融
+    文件路径：多物理场仿真\wiki\模型训练\dB域与线性域对比研究.md
+7.  7 种 Loss 详解
+    文件路径：多物理场仿真\wiki\模型训练\损失函数设计.md
+8.  RAG 5 策略评测
+    文件路径：多物理场仿真\wiki\模型训练\RAG 检索策略对比.md
+9.  飞书 Bot 构建复盘
+    文件路径：多物理场仿真\wiki\自动化\飞书 Bot 构建经验.md
+10. 代理模型理论基础
+    文件路径：多物理场仿真\wiki\模型训练\代理模型与降阶模型.md
+11. PINN 物理信息网络
+    文件路径：多物理场仿真\wiki\模型训练\PINN.md
+12. 知识库总索引
+    文件路径：多物理场仿真\wiki\索引.md
