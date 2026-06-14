@@ -28,7 +28,7 @@ import urllib.request
 import wave
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Windows 控制台 UTF-8
@@ -1559,10 +1559,10 @@ def _watch_stock_reports() -> None:
     elif not notify_users:
         log("[Stock] 暂无通知用户；建立飞书会话后会自动成为日报接收人")
     try:
-        timezone = ZoneInfo(STOCK_TIMEZONE)
+        stock_timezone = ZoneInfo(STOCK_TIMEZONE)
     except ZoneInfoNotFoundError:
-        log(f"[Stock] 未找到时区 {STOCK_TIMEZONE}，改用 Asia/Shanghai")
-        timezone = ZoneInfo("Asia/Shanghai")
+        log(f"[Stock] 未找到时区 {STOCK_TIMEZONE}，改用固定北京时间 UTC+8")
+        stock_timezone = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
     state = _load_stock_report_state()
     last_attempt_at = 0.0
@@ -1570,8 +1570,16 @@ def _watch_stock_reports() -> None:
         f"[Stock] 收盘报告时间 {STOCK_REPORT_HOUR:02d}:{STOCK_REPORT_MINUTE:02d} "
         f"{STOCK_TIMEZONE} | 目标用户: {len(notify_users)}"
     )
+    try:
+        identity = STOCK_SERVICE.stock_identity("600519")
+        if identity:
+            log(f"[Stock] 行情数据源可用: {STOCK_SERVICE.provider.name}")
+        else:
+            log("[Stock] 行情代码表已返回，但未找到自检代码 600519")
+    except Exception as e:
+        log(f"[Stock] 行情数据源启动自检失败: {type(e).__name__}: {e}")
     while True:
-        now = datetime.now(timezone)
+        now = datetime.now(stock_timezone)
         try:
             trading_day = STOCK_SERVICE.is_trading_day(now.date())
             due = is_report_due(
