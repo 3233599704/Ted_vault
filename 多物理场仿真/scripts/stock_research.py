@@ -415,7 +415,10 @@ class EastmoneyPublicProvider:
     def _sina_market_snapshot(self) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         page_size = 100
+        deadline = time.monotonic() + 180
         for page in range(1, 80):
+            if time.monotonic() >= deadline:
+                break
             try:
                 payload = self._get_json(
                     (
