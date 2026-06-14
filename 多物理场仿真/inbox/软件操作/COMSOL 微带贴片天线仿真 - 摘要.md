@@ -40,12 +40,12 @@ status: draft
 
 贴片的 S11 曲线和场分布结果：
 
-![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/b5a9f7038dbe3e61c450fecf0681c566.png]]
-![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/eaea271e78b4d916d3e044d77e780616.png]]
-![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/50b8c656b2814aecb8d4b5943a7a54bf.png]]
-![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/59652b95c15b3137466ae5c224327d36.jpg]]
-![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/a055a1fae452b64b10e737bad7d980f2.jpg]]
-![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/bc36f6b44c3b78669a73897977303d5b.jpg]]
+![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/b5a9f7038dbe3e61c450fecf0681c566_right.png]]
+![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/eaea271e78b4d916d3e044d77e780616_right.png]]
+![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/50b8c656b2814aecb8d4b5943a7a54bf_right.png]]
+![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/59652b95c15b3137466ae5c224327d36_right.jpg]]
+![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/a055a1fae452b64b10e737bad7d980f2_right.jpg]]
+![[多物理场仿真/raw/模型训练/6_10文件/comsol仿真建模/bc36f6b44c3b78669a73897977303d5b_right.jpg]]
 
 ## 🤔 收获
 

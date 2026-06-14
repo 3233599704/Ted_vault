@@ -19,6 +19,6 @@ for name in IMAGES:
     right = img.crop((w // 2, 0, w, h))
     out = SRC / f"{Path(name).stem}_right{Path(name).suffix}"
     right.save(out)
-    print(f"✅ {name} → {out.name}  ({w//2}×{h})")
+    print(f"[OK] {name} -> {out.name}  ({w//2}x{h})")
 
-print("\n完成！inbox 里把图片路径中的文件名加上 _right 即可。")
+print("\nDone! Replace filenames with _right versions in inbox.")
