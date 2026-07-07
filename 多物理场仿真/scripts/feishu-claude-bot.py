@@ -25,11 +25,20 @@ import threading
 import time as _time_module
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 import wave
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+# Some IDE/sandbox shells inject dead proxy endpoints such as 127.0.0.1:9.
+# Feishu, MiMo and Claude CLI should use the normal system network here.
+for _proxy_name in (
+    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
+    "http_proxy", "https_proxy", "all_proxy",
+):
+    os.environ.pop(_proxy_name, None)
 
 # Windows 控制台 UTF-8
 if sys.platform == "win32":
@@ -65,7 +74,7 @@ ALLOWED_USERS = [
 VAULT_PATH = os.environ.get("VAULT_PATH", r"D:\Staid\app\Obsidian\Ted_vault")
 CLAUDE_CMD = os.environ.get("CLAUDE_CMD", "")
 CLAUDE_PERMISSION_MODE = os.environ.get("CLAUDE_PERMISSION_MODE", "acceptEdits")
-MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "300"))
+MAX_CLAUDE_SECONDS = int(os.environ.get("MAX_CLAUDE_SECONDS", "90"))
 WS_RESTART_AFTER_SECONDS = int(
     os.environ.get("WS_RESTART_AFTER_SECONDS", "240")
 )
@@ -277,7 +286,11 @@ def update_ws_health(state: str, detail: str = "") -> None:
                 json.dump(payload, f, ensure_ascii=False)
             os.replace(temp_file, HEALTH_FILE)
         except OSError as e:
-            log(f"连接健康状态写入失败: {e}")
+            try:
+                with open(HEALTH_FILE, "w", encoding="utf-8") as f:
+                    json.dump(payload, f, ensure_ascii=False)
+            except OSError:
+                log(f"连接健康状态写入失败: {e}")
 
 
 def watch_ws_health(client) -> None:
@@ -393,6 +406,53 @@ def reset_session(sender_id: str) -> None:
     save_sessions(SESSIONS)
 
 
+def get_claude_base_url() -> str:
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "").strip()
+    if base_url:
+        return base_url
+
+    settings_path = os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
+    try:
+        with open(settings_path, "r", encoding="utf-8") as f:
+            settings = json.load(f)
+        return str(
+            settings.get("env", {}).get("ANTHROPIC_BASE_URL", "")
+        ).strip()
+    except (OSError, json.JSONDecodeError):
+        return ""
+
+
+def check_claude_api_endpoint() -> str:
+    base_url = get_claude_base_url()
+    if not base_url:
+        return ""
+
+    parsed = urlparse(base_url)
+    if not parsed.scheme:
+        parsed = urlparse(f"https://{base_url}")
+    if not parsed.hostname:
+        return ""
+
+    try:
+        models_url = base_url.rstrip("/") + "/v1/models"
+        request = urllib.request.Request(models_url, method="GET")
+        with urllib.request.urlopen(request, timeout=5) as response:
+            # Any HTTP response from the API server means the endpoint is alive.
+            response.read(1)
+        return ""
+    except urllib.error.HTTPError:
+        # 401/403/404 still prove that the server is reachable. Claude Code will
+        # surface auth or compatibility errors with more context if needed.
+        return ""
+    except (OSError, urllib.error.URLError):
+        return (
+            f"Claude Code 当前模型 API 连不上：{base_url}\n"
+            "Bot 和飞书连接是正常的，但模型服务不可达，所以暂时不能生成回复。\n"
+            "如果你刚切过 DS/API 配置，请检查 Claude Code 的 API 地址、网络/VPN，"
+            "或者确认 10.38.128.20:8000 这类内网服务已经启动。"
+        )
+
+
 def invoke_claude(
     prompt: str,
     session_id: str | None,
@@ -429,12 +489,82 @@ def invoke_claude(
     )
 
 
+def summarize_claude_failure(result: subprocess.CompletedProcess) -> tuple[str, bool]:
+    """Return a user-friendly Claude failure and whether a fresh session may help."""
+    raw = (result.stderr.strip() or result.stdout.strip())
+    status = ""
+    message = raw
+    try:
+        payload = json.loads(raw)
+        status = str(payload.get("api_error_status") or "")
+        message = str(
+            payload.get("result")
+            or payload.get("error")
+            or payload.get("message")
+            or raw
+        )
+    except json.JSONDecodeError:
+        match = re.search(r"API Error:\s*(\d+)\s*(.*)", raw, flags=re.I)
+        if match:
+            status = match.group(1)
+            message = match.group(0)
+
+    if status == "402" or "Insufficient Balance" in message:
+        return (
+            "Claude Code 调用失败：账号余额或额度不足。"
+            "请先去 Claude/Anthropic 账户里充值、续订或切换可用账号，然后再发消息。"
+            "Bot 和飞书连接本身是正常的。",
+            False,
+        )
+    if status == "429" or "rate limit" in message.lower():
+        return (
+            "Claude Code 暂时触发限流了，稍等一会儿再试就好。"
+            "Bot 和飞书连接本身是正常的。",
+            False,
+        )
+    if is_transient_claude_failure(result):
+        return (
+            "Claude Code 暂时连不上模型 API，刚才已经自动重试过一次但仍失败。"
+            "Bot 和飞书连接本身是正常的，可以过一会儿再发一次。",
+            False,
+        )
+    if "session" in message.lower() or "resume" in message.lower():
+        return (
+            f"Claude 会话恢复失败，准备自动新建会话重试：{message[:300]}",
+            True,
+        )
+    return (
+        f"Claude 调用失败（退出码 {result.returncode}）：\n{message[:500]}",
+        False,
+    )
+
+
+def is_transient_claude_failure(result: subprocess.CompletedProcess) -> bool:
+    raw = (result.stderr.strip() or result.stdout.strip()).lower()
+    transient_markers = (
+        "econnreset",
+        "etimedout",
+        "econnrefused",
+        "unable to connect to api",
+        "connection reset",
+        "socket hang up",
+        "network",
+        "temporarily unavailable",
+    )
+    return any(marker in raw for marker in transient_markers)
+
+
 def run_claude(
     sender_id: str,
     prompt: str,
     response_instruction: str = "",
 ) -> str:
     try:
+        endpoint_error = check_claude_api_endpoint()
+        if endpoint_error:
+            log(endpoint_error.replace("\n", " ")[:500])
+            return endpoint_error
+
         with CLAUDE_RUN_LOCK:
             session_id = SESSIONS.get(sender_id)
             result = invoke_claude(
@@ -442,23 +572,35 @@ def run_claude(
                 session_id,
                 response_instruction,
             )
+            if result.returncode != 0 and is_transient_claude_failure(result):
+                log("Claude API 连接临时失败，5 秒后重试一次")
+                _time_module.sleep(5)
+                result = invoke_claude(
+                    prompt,
+                    session_id,
+                    response_instruction,
+                )
 
             # A Claude update or deleted local history can invalidate a session.
             # Retry once as a fresh conversation instead of breaking the bot.
             if result.returncode != 0 and session_id:
-                error = result.stderr.strip() or result.stdout.strip()
-                log(f"会话恢复失败，自动新建会话: {error[:300]}")
-                reset_session(sender_id)
-                result = invoke_claude(
-                    prompt,
-                    None,
-                    response_instruction,
-                )
+                message, may_retry_fresh = summarize_claude_failure(result)
+                if may_retry_fresh:
+                    log(message[:500])
+                    reset_session(sender_id)
+                    result = invoke_claude(
+                        prompt,
+                        None,
+                        response_instruction,
+                    )
+                else:
+                    log(f"Claude 调用失败: {message[:500]}")
+                    return message
 
         if result.returncode != 0:
-            error = result.stderr.strip() or result.stdout.strip()
-            log(f"Claude 调用失败: exit={result.returncode}, {error[:500]}")
-            return f"Claude 调用失败（退出码 {result.returncode}）：\n{error[:500]}"
+            message, _ = summarize_claude_failure(result)
+            log(f"Claude 调用失败: {message[:500]}")
+            return message
 
         try:
             response = json.loads(result.stdout)
@@ -571,6 +713,27 @@ def markdown_to_feishu_text(text: str) -> str:
     return text.strip()
 
 
+def call_feishu_api_with_retry(action: str, request_func, attempts: int = 3):
+    """Retry transient Feishu API connection failures."""
+    retry_delays = (1, 3, 8)
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            return request_func()
+        except Exception as e:
+            last_error = e
+            if attempt >= attempts - 1:
+                break
+            delay = retry_delays[min(attempt, len(retry_delays) - 1)]
+            log(
+                f"{action} 连接异常，{delay} 秒后重试 "
+                f"({attempt + 1}/{attempts - 1}): "
+                f"{type(e).__name__}: {e}"
+            )
+            _time_module.sleep(delay)
+    raise last_error
+
+
 def reply_text_message(msg_id: str, text: str) -> bool:
     text = markdown_to_feishu_text(text)
     body = ReplyMessageRequestBody.builder() \
@@ -581,11 +744,14 @@ def reply_text_message(msg_id: str, text: str) -> bool:
         .message_id(msg_id) \
         .request_body(body) \
         .build()
-    resp = lark.Client.builder() \
-        .app_id(APP_ID) \
-        .app_secret(APP_SECRET) \
-        .build() \
-        .im.v1.message.reply(req)
+    resp = call_feishu_api_with_retry(
+        "飞书文字回复",
+        lambda: lark.Client.builder()
+        .app_id(APP_ID)
+        .app_secret(APP_SECRET)
+        .build()
+        .im.v1.message.reply(req),
+    )
     if not resp.success():
         log(f"❌ 回复失败: code={resp.code}, msg={resp.msg}")
         return False
@@ -846,23 +1012,29 @@ def synthesize_mimo_speech(text: str) -> tuple[bytes, int]:
 
 def reply_audio_message(msg_id: str, text: str) -> bool:
     opus_bytes, duration_ms = synthesize_mimo_speech(text)
-    audio_stream = BytesIO(opus_bytes)
-    audio_stream.name = "reply.opus"
 
-    upload_body = CreateFileRequestBody.builder() \
-        .file_type("opus") \
-        .file_name("reply.opus") \
-        .duration(duration_ms) \
-        .file(audio_stream) \
-        .build()
-    upload_req = CreateFileRequest.builder() \
-        .request_body(upload_body) \
-        .build()
-    upload_resp = lark.Client.builder() \
-        .app_id(APP_ID) \
-        .app_secret(APP_SECRET) \
-        .build() \
-        .im.v1.file.create(upload_req)
+    def upload_audio_once():
+        audio_stream = BytesIO(opus_bytes)
+        audio_stream.name = "reply.opus"
+        upload_body = CreateFileRequestBody.builder() \
+            .file_type("opus") \
+            .file_name("reply.opus") \
+            .duration(duration_ms) \
+            .file(audio_stream) \
+            .build()
+        upload_req = CreateFileRequest.builder() \
+            .request_body(upload_body) \
+            .build()
+        return lark.Client.builder() \
+            .app_id(APP_ID) \
+            .app_secret(APP_SECRET) \
+            .build() \
+            .im.v1.file.create(upload_req)
+
+    upload_resp = call_feishu_api_with_retry(
+        "飞书音频上传",
+        upload_audio_once,
+    )
     if not upload_resp.success():
         raise RuntimeError(
             f"飞书音频上传失败: code={upload_resp.code}, "
@@ -878,11 +1050,14 @@ def reply_audio_message(msg_id: str, text: str) -> bool:
         .message_id(msg_id) \
         .request_body(body) \
         .build()
-    resp = lark.Client.builder() \
-        .app_id(APP_ID) \
-        .app_secret(APP_SECRET) \
-        .build() \
-        .im.v1.message.reply(req)
+    resp = call_feishu_api_with_retry(
+        "飞书语音回复",
+        lambda: lark.Client.builder()
+        .app_id(APP_ID)
+        .app_secret(APP_SECRET)
+        .build()
+        .im.v1.message.reply(req),
+    )
     if not resp.success():
         raise RuntimeError(
             f"飞书语音发送失败: code={resp.code}, msg={resp.msg}"
@@ -1081,6 +1256,40 @@ def analyze_image_with_vision_api(path: str) -> str:
 # ============================================================
 # 消息处理（官方 EventDispatcherHandler 模式）
 # ============================================================
+
+
+def _collect_text_fragments(value) -> list[str]:
+    fragments: list[str] = []
+    if isinstance(value, str):
+        if value.strip():
+            fragments.append(value.strip())
+        return fragments
+    if isinstance(value, list):
+        for item in value:
+            fragments.extend(_collect_text_fragments(item))
+        return fragments
+    if isinstance(value, dict):
+        for key in ("title", "text", "href", "url", "content"):
+            if key in value:
+                fragments.extend(_collect_text_fragments(value.get(key)))
+        for key, item in value.items():
+            if key not in {"title", "text", "href", "url", "content"}:
+                fragments.extend(_collect_text_fragments(item))
+    return fragments
+
+
+def extract_message_text(msg_type: str, raw_content: str) -> str:
+    content = json.loads(raw_content)
+    if msg_type == "text":
+        return str(content.get("text", "")).strip()
+    if msg_type == "post":
+        fragments = _collect_text_fragments(content)
+        deduped: list[str] = []
+        for item in fragments:
+            if item and item not in deduped:
+                deduped.append(item)
+        return "\n".join(deduped).strip()
+    return ""
 
 
 def _stock_help_text() -> str:
@@ -1410,13 +1619,14 @@ def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
                 log("图片消息中无 image_key，跳过")
             return
 
-        if msg_type != "text":
-            log(f"跳过非文本消息: {msg_type}")
+        if msg_type not in {"text", "post"}:
+            snippet = str(msg.content or "").replace("\n", " ")[:200]
+            log(f"跳过非文本消息: {msg_type} | {snippet}")
             return
 
-        content = json.loads(msg.content)
-        user_text = content.get("text", "").strip()
+        user_text = extract_message_text(msg_type, msg.content)
         if not user_text:
+            log(f"{msg_type} 消息中没有可处理文本，跳过")
             return
 
         MESSAGE_EXECUTOR.submit(
@@ -1448,9 +1658,13 @@ def _load_distill_notified() -> set[str]:
 
 def _save_distill_notified(notified: set[str]) -> None:
     temp = DISTILL_NOTIFIED_FILE + ".tmp"
-    with open(temp, "w", encoding="utf-8") as f:
-        json.dump(sorted(notified), f)
-    os.replace(temp, DISTILL_NOTIFIED_FILE)
+    try:
+        with open(temp, "w", encoding="utf-8") as f:
+            json.dump(sorted(notified), f)
+        os.replace(temp, DISTILL_NOTIFIED_FILE)
+    except OSError:
+        with open(DISTILL_NOTIFIED_FILE, "w", encoding="utf-8") as f:
+            json.dump(sorted(notified), f)
 
 
 def _send_proactive_msg(open_id: str, text: str) -> bool:
@@ -1466,11 +1680,14 @@ def _send_proactive_msg(open_id: str, text: str) -> bool:
             .receive_id_type("open_id") \
             .request_body(body) \
             .build()
-        resp = lark.Client.builder() \
-            .app_id(APP_ID) \
-            .app_secret(APP_SECRET) \
-            .build() \
-            .im.v1.message.create(req)
+        resp = call_feishu_api_with_retry(
+            "飞书主动通知",
+            lambda: lark.Client.builder()
+            .app_id(APP_ID)
+            .app_secret(APP_SECRET)
+            .build()
+            .im.v1.message.create(req),
+        )
         if not resp.success():
             log(f"[Watchdog] 通知失败 {open_id[-8:]}: code={resp.code}")
             return False

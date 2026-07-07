@@ -22,6 +22,9 @@ $env:FEISHU_NOTIFY_USERS = [Environment]::GetEnvironmentVariable(
 $env:FEISHU_STOCK_NOTIFY_USERS = [Environment]::GetEnvironmentVariable(
     "FEISHU_STOCK_NOTIFY_USERS", "User"
 )
+$env:MAX_CLAUDE_SECONDS = [Environment]::GetEnvironmentVariable(
+    "MAX_CLAUDE_SECONDS", "User"
+)
 $env:STOCK_ENABLED = [Environment]::GetEnvironmentVariable(
     "STOCK_ENABLED", "User"
 )
@@ -73,6 +76,14 @@ $env:TTS_DYNAMIC_STYLE = [Environment]::GetEnvironmentVariable(
 $env:TTS_DIRECTOR_MODEL = [Environment]::GetEnvironmentVariable(
     "TTS_DIRECTOR_MODEL", "User"
 )
+
+# Avoid inheriting transient IDE/sandbox proxy settings that break Feishu.
+$env:HTTP_PROXY = $null
+$env:HTTPS_PROXY = $null
+$env:ALL_PROXY = $null
+$env:http_proxy = $null
+$env:https_proxy = $null
+$env:all_proxy = $null
 
 Set-Location -LiteralPath $scriptDir
 
