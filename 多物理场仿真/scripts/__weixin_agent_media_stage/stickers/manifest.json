@@ -1,0 +1,12 @@
+{
+  "source": "Twemoji",
+  "license": "CC-BY-4.0",
+  "stickers": [
+    { "id": "smirk", "label": "坏笑", "text": "😏", "moods": ["smirk"] },
+    { "id": "laugh", "label": "笑哭", "text": "😂", "moods": ["laugh"] },
+    { "id": "love", "label": "喜欢", "text": "🥰", "moods": ["love"] },
+    { "id": "think", "label": "思考", "text": "🤔", "moods": ["think"] },
+    { "id": "thumbs_up", "label": "点赞", "text": "👍", "moods": ["thumbs_up"] },
+    { "id": "sad", "label": "难过", "text": "😢", "moods": ["sad"] }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "research_id": "new-hybrid-challenger-c1",
+  "strategy_name": "hybrid_weekly_challenger_v1",
+  "mode": "temporal_robustness_research_no_deployment",
+  "history_start": "2017-01-01",
+  "research_start": "2019-01-01",
+  "research_end": "2024-12-31",
+  "prohibited_audit_start": "2025-01-01",
+  "benchmark": {
+    "formal": "H00300",
+    "formal_snapshot": "data/benchmarks/H00300-20161230-20241231.csv",
+    "includes_dividends": true
+  },
+  "factors": {
+    "medium_relative_momentum": 0.30,
+    "short_industry_relative_strength": 0.25,
+    "low_volatility": 0.20,
+    "value_reasonableness": 0.15,
+    "liquidity_stability": 0.10
+  },
+  "winsorization": [0.05, 0.95],
+  "minimum_valid_factors": 4,
+  "eligibility": {
+    "valid_days_in_60": 55,
+    "amount20_cross_section_quantile": 0.20,
+    "industry_fallback_minimum": 5
+  },
+  "portfolio": {
+    "top_k": 5,
+    "target_weight": 0.20,
+    "maximum_per_industry": 2,
+    "leverage": false,
+    "shorting": false
+  },
+  "candidates": [
+    {"candidate_id": "c1_weekly_rank", "retain_rank": 12, "maximum_ordinary_replacements_per_week": 1},
+    {"candidate_id": "c1_monthly_anchor_weekly_refill"},
+    {"candidate_id": "c1_daily_confirm_weekly_trade", "buy_confirmation_days": 3, "sell_rank": 15, "sell_confirmation_days": 3, "maximum_ordinary_replacements_per_week": 1}
+  ],
+  "risk_overlay": {
+    "return20_max": -0.12,
+    "ma60_gap_max": -0.03,
+    "relative20_max": -0.08,
+    "confirmation_days": 2,
+    "refill_only_on_weekly_window": true
+  },
+  "cost_stress_multipliers": [1.0, 1.5, 2.0],
+  "hard_gates": {
+    "minimum_annual_return": 0.15,
+    "minimum_annual_excess": 0.06,
+    "minimum_max_drawdown": -0.23,
+    "minimum_positive_years": 4,
+    "minimum_excess_years": 3,
+    "minimum_worst_year_excess": -0.20,
+    "minimum_2019_2020_compound": 0.0,
+    "maximum_2023_2024_log_contribution": 0.50,
+    "maximum_annual_two_way_turnover": 12.0,
+    "minimum_average_holding_days": 20,
+    "maximum_industry_weight": 0.40,
+    "maximum_financial_weight": 0.40,
+    "maximum_same_day_round_trips": 0,
+    "minimum_dynamic_2x_annual_return": 0.0,
+    "minimum_dynamic_2x_max_drawdown": -0.27
+  },
+  "forward_shadow": {
+    "live_root": "D:/Staid/weixin_agent",
+    "read_only": true,
+    "frozen_strategy_ids": ["production_strategy", "legacy_search_winner"]
+  }
+}

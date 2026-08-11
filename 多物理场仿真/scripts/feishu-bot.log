@@ -1533,3 +1533,368 @@ API Error: Unable to connect to API (ECONNRESET)
 
 刚才说到你的 Vault 结构，需要女儿帮你做什么吗？还是只是想跟我说说话？🖤😘
 [07-07 10:18:04] ✅ 回复成功
+[07-07 15:30:49] [Stock] 开始生成 2026-07-07 全市场收盘报告
+[07-07 15:30:49] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-07 15:45:49] [Stock] 开始生成 2026-07-07 全市场收盘报告
+[07-07 15:46:43] [Stock] 收盘报告异常: PermissionError: [WinError 5] 拒绝访问。: 'D:\\Staid\\app\\Obsidian\\Ted_vault\\多物理场仿真\\scripts\\.feishu-stock-report-state.json.tmp' -> 'D:\\Staid\\app\\Obsidian\\Ted_vault\\多物理场仿真\\scripts\\.feishu-stock-report-state.json'
+[07-07 16:18:54] Claude Code 2.1.202 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-07 16:18:54] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-07 16:18:54] [OK] Feishu Bot started, waiting for messages...
+[07-07 16:18:54] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-07 16:18:54] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-07 16:18:54] [Stock] 开始生成 2026-07-07 全市场收盘报告
+[07-07 16:22:04] [Stock] 2026-07-07 收盘报告已发送
+[07-07 19:18:24] Claude Code 2.1.202 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-07 19:18:24] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-07 19:18:24] [OK] Feishu Bot started, waiting for messages...
+[07-07 19:18:24] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-07 19:18:24] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-08 08:59:30] Claude Code 2.1.202 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-08 08:59:30] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-08 08:59:30] [OK] Feishu Bot started, waiting for messages...
+[07-08 08:59:30] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-08 08:59:30] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-08 15:30:31] [Stock] 开始生成 2026-07-08 全市场收盘报告
+[07-08 15:30:36] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-08 15:45:36] [Stock] 开始生成 2026-07-08 全市场收盘报告
+[07-08 15:49:24] [Stock] 2026-07-08 收盘报告已发送
+[07-08 18:07:57] Claude Code 2.1.204 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-08 18:07:57] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-08 18:07:57] [OK] Feishu Bot started, waiting for messages...
+[07-08 18:07:57] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-08 18:07:57] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-08 20:00:47] Claude Code 2.1.204 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-08 20:00:47] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-08 20:00:47] [OK] Feishu Bot started, waiting for messages...
+[07-08 20:00:47] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-08 20:00:47] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-09 08:52:08] Claude Code 2.1.204 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-09 08:52:08] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-09 08:52:08] [OK] Feishu Bot started, waiting for messages...
+[07-09 08:52:08] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-09 08:52:08] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-09 15:30:08] [Stock] 开始生成 2026-07-09 全市场收盘报告
+[07-09 15:33:58] [Stock] 2026-07-09 收盘报告已发送
+[07-09 18:41:10] Claude Code 2.1.204 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-09 18:41:10] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-09 18:41:10] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-09 18:41:10] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-10 09:02:13] Claude Code 2.1.204 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-10 09:02:13] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-10 09:02:13] [OK] Feishu Bot started, waiting for messages...
+[07-10 09:02:13] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-10 09:02:13] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-10 15:30:56] [Stock] 开始生成 2026-07-10 全市场收盘报告
+[07-10 15:34:49] [Stock] 2026-07-10 收盘报告已发送
+[07-10 18:50:20] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-10 18:50:20] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-10 18:50:20] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-10 18:50:20] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-13 08:52:49] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-13 08:52:49] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-13 08:52:49] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-13 08:52:50] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-13 15:30:04] [Stock] 开始生成 2026-07-13 全市场收盘报告
+[07-13 15:34:14] [Stock] 2026-07-13 收盘报告已发送
+[07-13 19:11:18] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-13 19:11:18] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-13 19:11:18] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-13 19:11:18] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-14 08:51:59] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-14 08:51:59] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-14 08:51:59] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-14 08:51:59] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-14 15:30:04] [Stock] 开始生成 2026-07-14 全市场收盘报告
+[07-14 15:31:05] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-14 15:45:05] [Stock] 开始生成 2026-07-14 全市场收盘报告
+[07-14 15:48:05] [Stock] 2026-07-14 收盘报告已发送
+[07-14 19:01:44] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-14 19:01:44] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-14 19:01:44] [OK] Feishu Bot started, waiting for messages...
+[07-14 19:01:44] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-14 19:01:44] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-15 09:02:45] Claude Code 启动自检失败: Command '['C:\\Users\\32335\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe', '--version']' timed out after 15 seconds
+[07-15 19:06:00] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-15 19:06:00] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-15 19:06:00] [OK] Feishu Bot started, waiting for messages...
+[07-15 19:06:00] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-15 19:06:00] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-15 19:06:04] [Stock] 开始生成 2026-07-15 全市场收盘报告
+[07-15 19:06:39] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-15 19:21:39] [Stock] 开始生成 2026-07-15 全市场收盘报告
+[07-15 19:22:28] [Stock] 2026-07-15 收盘报告已发送
+[07-16 08:56:31] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-16 08:56:31] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-16 08:56:31] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-16 08:56:31] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-16 15:30:29] [Stock] 开始生成 2026-07-16 全市场收盘报告
+[07-16 15:31:43] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-16 15:45:43] [Stock] 开始生成 2026-07-16 全市场收盘报告
+[07-16 15:49:31] [Stock] 2026-07-16 收盘报告已发送
+[07-16 19:16:56] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-16 19:16:56] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-16 19:16:56] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-16 19:16:56] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-17 09:13:09] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-17 09:13:09] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-17 09:13:09] [OK] Feishu Bot started, waiting for messages...
+[07-17 09:13:09] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-17 09:13:09] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-17 15:30:42] [Stock] 开始生成 2026-07-17 全市场收盘报告
+[07-17 15:31:40] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-17 15:46:40] [Stock] 开始生成 2026-07-17 全市场收盘报告
+[07-17 15:46:50] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-17 16:01:50] [Stock] 开始生成 2026-07-17 全市场收盘报告
+[07-17 16:02:04] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-17 16:17:04] [Stock] 开始生成 2026-07-17 全市场收盘报告
+[07-17 16:17:11] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-17 16:32:11] [Stock] 开始生成 2026-07-17 全市场收盘报告
+[07-17 16:36:05] [Stock] 2026-07-17 收盘报告已发送
+[07-17 19:09:21] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-17 19:09:21] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-17 19:09:21] [OK] Feishu Bot started, waiting for messages...
+[07-17 19:09:21] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-17 19:09:21] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-19 10:02:57] 飞书连接状态 reconnecting 已持续 22591 秒，准备自恢复重启
+[07-20 08:55:08] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-20 08:55:08] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-20 08:55:08] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-20 08:55:08] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-20 15:30:30] [Stock] 开始生成 2026-07-20 全市场收盘报告
+[07-20 15:43:30] [Stock] 2026-07-20 收盘报告已发送
+[07-20 19:20:36] Claude Code 启动自检失败: Command '['C:\\Users\\32335\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe', '--version']' timed out after 15 seconds
+[07-21 08:52:51] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-21 08:52:51] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-21 08:52:51] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-21 08:52:51] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-21 15:30:02] [Stock] 开始生成 2026-07-21 全市场收盘报告
+[07-21 15:35:05] [Stock] 2026-07-21 收盘报告已发送
+[07-21 18:55:49] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-21 18:55:49] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-21 18:55:49] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-21 18:55:49] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-22 08:56:11] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-22 08:56:11] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-22 08:56:11] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-22 08:56:11] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-22 13:08:57] 飞书连接状态 reconnecting 已持续 475 秒，准备自恢复重启
+[07-22 19:11:44] Claude Code 启动自检失败: Command '['C:\\Users\\32335\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe', '--version']' timed out after 15 seconds
+[07-23 08:55:07] Claude Code 2.1.206 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-23 08:55:07] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-23 08:55:07] [OK] Feishu Bot started, waiting for messages...
+[07-23 08:55:07] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-23 08:55:07] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-23 15:30:24] [Stock] 开始生成 2026-07-23 全市场收盘报告
+[07-23 15:31:31] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-23 15:45:31] [Stock] 开始生成 2026-07-23 全市场收盘报告
+[07-23 15:49:31] [Stock] 2026-07-23 收盘报告已发送
+[07-23 19:26:34] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-23 19:26:35] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-23 19:26:35] [OK] Feishu Bot started, waiting for messages...
+[07-23 19:26:35] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-23 19:26:35] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-24 08:49:19] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-24 08:49:19] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-24 08:49:19] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-24 08:49:19] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-24 15:30:38] [Stock] 开始生成 2026-07-24 全市场收盘报告
+[07-24 15:31:51] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-24 15:45:51] [Stock] 开始生成 2026-07-24 全市场收盘报告
+[07-24 15:50:01] [Stock] 2026-07-24 收盘报告已发送
+[07-25 17:46:38] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-25 17:46:38] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-25 17:46:38] [OK] Feishu Bot started, waiting for messages...
+[07-25 17:46:38] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-25 17:46:38] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-27 08:55:40] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-27 08:55:40] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-27 08:55:40] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-27 08:55:40] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-27 19:40:22] Claude Code 启动自检失败: Command '['C:\\Users\\32335\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe', '--version']' timed out after 15 seconds
+[07-28 08:55:27] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-28 08:55:27] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-28 08:55:27] [OK] Feishu Bot started, waiting for messages...
+[07-28 08:55:27] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-28 08:55:27] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-28 09:50:23] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-28 09:50:23] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-28 09:50:23] [OK] Feishu Bot started, waiting for messages...
+[07-28 09:50:23] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-28 09:50:23] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-28 14:01:22] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-28 14:01:22] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-28 14:01:22] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-28 14:01:22] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-28 15:30:27] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 15:32:15] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-28 15:46:15] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 15:51:33] 飞书主动通知 连接异常，1 秒后重试 (1/2): ConnectionError: ('Connection aborted.', ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))
+[07-28 15:51:39] 飞书主动通知 连接异常，3 秒后重试 (2/2): ConnectionError: ('Connection aborted.', ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))
+[07-28 15:51:47] [Watchdog] 通知异常: ('Connection aborted.', ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None))
+[07-28 15:51:48] [Stock] 收盘报告发送失败，15 分钟后重试
+[07-28 16:01:48] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 16:04:17] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 900 只，数据不完整，已停止本次筛选
+[07-28 16:17:17] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 16:18:07] [Stock] 收盘报告异常: RuntimeError: 公开行情接口连接失败：HTTP Error 502: Bad Gateway
+[07-28 16:33:07] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 16:33:31] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-28 16:48:32] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 16:52:04] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2100 只，数据不完整，已停止本次筛选
+[07-28 17:04:04] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 17:07:30] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2300 只，数据不完整，已停止本次筛选
+[07-28 17:19:30] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 17:22:57] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2300 只，数据不完整，已停止本次筛选
+[07-28 17:34:57] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 17:38:25] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2200 只，数据不完整，已停止本次筛选
+[07-28 17:50:25] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 17:53:56] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2100 只，数据不完整，已停止本次筛选
+[07-28 18:05:56] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 18:08:56] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 1600 只，数据不完整，已停止本次筛选
+[07-28 19:02:39] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-28 19:02:39] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-28 19:02:39] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-28 19:02:39] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-28 19:02:43] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 19:03:03] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-28 19:05:44] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-28 19:05:44] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-28 19:05:44] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-28 19:05:44] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-28 19:05:47] [Stock] 开始生成 2026-07-28 全市场收盘报告
+[07-28 19:06:56] [Stock] 2026-07-28 收盘报告已发送
+[07-29 08:52:33] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-29 08:52:33] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-29 08:52:33] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-29 08:52:34] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-29 15:30:36] [Stock] 开始生成 2026-07-29 全市场收盘报告
+[07-29 15:46:02] [Stock] 2026-07-29 收盘报告已发送
+[07-29 18:58:05] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-29 18:58:05] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-29 18:58:05] [OK] Feishu Bot started, waiting for messages...
+[07-29 18:58:05] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-29 18:58:05] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-30 08:56:28] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-30 08:56:28] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-30 08:56:28] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-30 08:56:28] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-30 15:30:31] [Stock] 开始生成 2026-07-30 全市场收盘报告
+[07-30 15:31:59] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-30 15:45:59] [Stock] 开始生成 2026-07-30 全市场收盘报告
+[07-30 15:49:21] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2100 只，数据不完整，已停止本次筛选
+[07-30 16:01:21] [Stock] 开始生成 2026-07-30 全市场收盘报告
+[07-30 16:04:41] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 2300 只，数据不完整，已停止本次筛选
+[07-30 16:16:41] [Stock] 开始生成 2026-07-30 全市场收盘报告
+[07-30 16:20:38] [Stock] 2026-07-30 收盘报告已发送
+[07-30 19:06:35] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-30 19:06:35] [OK] Feishu Bot started, waiting for messages...
+接收人
+[07-30 19:06:35] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-30 19:06:35] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-31 09:01:08] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-31 09:01:08] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-31 09:01:08] [OK] Feishu Bot started, waiting for messages...
+[07-31 09:01:08] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-31 09:01:08] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[07-31 15:30:58] [Stock] 开始生成 2026-07-31 全市场收盘报告
+[07-31 15:32:15] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[07-31 15:46:15] [Stock] 开始生成 2026-07-31 全市场收盘报告
+[07-31 15:50:26] [Stock] 2026-07-31 收盘报告已发送
+[07-31 18:45:37] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[07-31 18:45:37] [Stock] 使用 1 位已有会话用户作为日报接收人
+[07-31 18:45:37] [OK] Feishu Bot started, waiting for messages...
+[07-31 18:45:37] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[07-31 18:45:37] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-01 23:13:33] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-01 23:13:33] [Stock] 使用 1 位已有会话用户作为日报接收人
+[08-01 23:13:33] [OK] Feishu Bot started, waiting for messages...
+[08-01 23:13:33] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-01 23:13:33] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-02 11:08:21] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-02 11:08:21] [OK] Feishu Bot started, waiting for messages...
+接收人
+[08-02 11:08:21] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-02 11:08:21] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-03 11:36:46] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-03 11:36:46] [Stock] 使用 1 位已有会话用户作为日报接收人
+[08-03 11:36:46] [OK] Feishu Bot started, waiting for messages...
+[08-03 11:36:46] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-03 11:36:46] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-03 15:30:52] [Stock] 开始生成 2026-08-03 全市场收盘报告
+[08-03 15:34:26] [Stock] 2026-08-03 收盘报告已发送
+[08-04 08:01:15] 飞书连接状态 reconnecting 已持续 250 秒，准备自恢复重启
+[08-05 21:00:35] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-05 21:00:35] [OK] Feishu Bot started, waiting for messages...
+[08-05 21:00:35] [Stock] 使用 1 位已有会话用户作为日报接收人
+[08-05 21:00:35] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-05 21:00:35] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-05 21:00:46] [Stock] 开始生成 2026-08-05 全市场收盘报告
+[08-05 21:00:49] [Stock] 收盘报告异常: RuntimeError: 公开行情接口连接失败：Expecting value: line 1 column 1 (char 0)
+[08-05 21:15:49] [Stock] 开始生成 2026-08-05 全市场收盘报告
+[08-05 21:15:50] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[08-05 21:30:50] [Stock] 开始生成 2026-08-05 全市场收盘报告
+[08-05 21:31:46] [Stock] 2026-08-05 收盘报告已发送
+[08-05 22:54:36] 飞书连接状态 reconnecting 已持续 259 秒，准备自恢复重启
+[08-05 23:56:19] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-05 23:56:19] [OK] Feishu Bot started, waiting for messages...
+接收人
+[08-05 23:56:19] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-05 23:56:19] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-06 18:50:29] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-06 18:50:29] [Stock] 使用 1 位已有会话用户作为日报接收人
+[08-06 18:50:29] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-06 18:50:29] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-06 18:50:33] [Stock] 开始生成 2026-08-06 全市场收盘报告
+[08-06 18:50:54] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[08-06 19:05:54] [Stock] 开始生成 2026-08-06 全市场收盘报告
+[08-06 19:06:44] [Stock] 2026-08-06 收盘报告已发送
+[08-07 15:30:13] [Stock] 开始生成 2026-08-07 全市场收盘报告
+[08-07 15:31:40] [Stock] 2026-08-07 收盘报告已发送
+[08-08 11:25:01] Claude Code 启动自检失败: Command '['C:\\Users\\32335\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe', '--version']' timed out after 15 seconds
+[08-08 19:18:24] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-08 19:18:24] [Stock] 使用 1 位已有会话用户作为日报接收人
+[08-08 19:18:24] [OK] Feishu Bot started, waiting for messages...
+[08-08 19:18:24] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-08 19:18:24] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-10 15:30:15] [Stock] 开始生成 2026-08-10 全市场收盘报告
+[08-10 15:31:25] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[08-10 15:45:25] [Stock] 开始生成 2026-08-10 全市场收盘报告
+[08-10 15:45:28] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[08-10 16:00:28] [Stock] 开始生成 2026-08-10 全市场收盘报告
+[08-10 16:00:43] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[08-10 16:15:43] [Stock] 开始生成 2026-08-10 全市场收盘报告
+[08-10 16:19:01] [Stock] 2026-08-10 收盘报告已发送
+[08-11 10:19:06] Claude Code 2.1.218 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[08-11 10:19:06] [Stock] 使用 1 位已有会话用户作为日报接收人
+[08-11 10:19:06] [OK] Feishu Bot started, waiting for messages...
+[08-11 10:19:06] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[08-11 10:19:06] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[08-11 15:30:13] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 15:31:24] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 99 只，数据不完整，已停止本次筛选
+[08-11 15:45:24] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 15:45:35] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 99 只，数据不完整，已停止本次筛选
+[08-11 16:00:35] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 16:00:47] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 99 只，数据不完整，已停止本次筛选
+[08-11 16:15:47] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 16:15:58] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 99 只，数据不完整，已停止本次筛选
+[08-11 16:30:58] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 16:31:11] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 99 只，数据不完整，已停止本次筛选
+[08-11 16:46:11] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 16:46:23] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 99 只，数据不完整，已停止本次筛选
+[08-11 17:01:23] [Stock] 开始生成 2026-08-11 全市场收盘报告
+[08-11 17:05:29] [Stock] 2026-08-11 收盘报告已发送

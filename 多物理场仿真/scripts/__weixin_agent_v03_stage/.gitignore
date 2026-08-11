@@ -1,0 +1,8 @@
+node_modules/
+state/
+logs/
+.env
+*.log
+playwright/.auth/
+downloads/
+backup/

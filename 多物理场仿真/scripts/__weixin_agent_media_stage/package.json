@@ -1,0 +1,39 @@
+{
+  "name": "weixin-vera-agent",
+  "version": "0.9.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "description": "Direct Weixin iLink personal agent with durable jobs, background tools and scheduled pushes.",
+  "scripts": {
+    "login": "node --disable-warning=ExperimentalWarning src/weixin-agent.js login",
+    "start": "node --disable-warning=ExperimentalWarning src/supervisor.js",
+    "start:profile": "node --disable-warning=ExperimentalWarning src/weixin-agent.js start",
+    "status": "node --disable-warning=ExperimentalWarning src/weixin-agent.js status",
+    "notify": "node --disable-warning=ExperimentalWarning src/weixin-agent.js notify",
+    "account:add": "node --disable-warning=ExperimentalWarning src/account-manager.js add",
+    "account:list": "node --disable-warning=ExperimentalWarning src/account-manager.js list",
+    "account:remove": "node --disable-warning=ExperimentalWarning src/account-manager.js remove",
+    "smoke:model": "node src/smoke-model.js",
+    "smoke:codex": "node src/smoke-codex.js",
+    "douyin:cookies": "node src/douyin-cookies.js",
+    "smoke:douyin": "node src/smoke-douyin.js",
+    "smoke:media": "node src/smoke-media.js",
+    "setup:tools": "py -m pip install --user --upgrade yt-dlp pillow",
+    "setup:stocks": "py -m pip install --user --upgrade akshare baostock && py tools/refresh_stock_universe.py",
+    "stock:refresh-universe": "py tools/refresh_stock_universe.py",
+    "stock:backtest": "py tools/stock_backtest.py all",
+    "check": "node --check src/weixin-agent.js",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-isolation=none test/*.test.js",
+    "test:stock": "py -m unittest discover -s test -p test_*.py",
+    "test:python": "py -m unittest discover -s test -p test_*.py",
+    "test:all": "npm test && npm run test:python"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "^0.144.1",
+    "qrcode-terminal": "0.12.0",
+    "silk-wasm": "3.7.1"
+  }
+}
