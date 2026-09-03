@@ -1992,3 +1992,4 @@ API Error: Unable to connect to API (ECONNRESET)
 [09-03 20:46:52] [OK] Feishu Bot started, waiting for messages...
 [09-03 20:46:52] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
 [09-03 20:46:52] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[09-03 23:35:34] 飞书连接状态 reconnecting 已持续 2372 秒，准备自恢复重启
