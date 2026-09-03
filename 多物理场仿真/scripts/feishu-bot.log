@@ -1960,3 +1960,35 @@ API Error: Unable to connect to API (ECONNRESET)
 [08-30 17:57:14] [OK] Feishu Bot started, waiting for messages...
 [08-30 17:57:14] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
 [08-30 17:57:14] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[09-01 20:36:17] Claude Code 2.1.251 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[09-01 20:36:17] [Stock] 使用 1 位已有会话用户作为日报接收人
+[09-01 20:36:17] [OK] Feishu Bot started, waiting for messages...
+[09-01 20:36:17] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[09-01 20:36:17] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[09-01 20:36:24] [Stock] 开始生成 2026-09-01 全市场收盘报告
+[09-01 20:36:45] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[09-01 20:51:45] [Stock] 开始生成 2026-09-01 全市场收盘报告
+[09-01 20:55:31] [Stock] 2026-09-01 收盘报告已发送
+[09-01 21:42:34] Claude Code 2.1.251 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[09-01 21:42:34] [Stock] 使用 1 位已有会话用户作为日报接收人
+[09-01 21:42:34] [OK] Feishu Bot started, waiting for messages...
+[09-01 21:42:34] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[09-01 21:42:34] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[09-02 15:30:58] [Stock] 开始生成 2026-09-02 全市场收盘报告
+[09-02 15:31:22] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[09-02 15:46:22] [Stock] 开始生成 2026-09-02 全市场收盘报告
+[09-02 15:47:09] [Stock] 2026-09-02 收盘报告已发送
+[09-03 15:30:10] [Stock] 开始生成 2026-09-03 全市场收盘报告
+[09-03 15:30:11] [Stock] 收盘报告异常: RuntimeError: 全市场行情只取得 100 只，数据不完整，已停止本次筛选
+[09-03 15:45:11] [Stock] 开始生成 2026-09-03 全市场收盘报告
+[09-03 15:45:52] [Stock] 2026-09-03 收盘报告已发送
+[09-03 18:30:57] Claude Code 2.1.251 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[09-03 18:30:57] [OK] Feishu Bot started, waiting for messages...
+接收人
+[09-03 18:30:57] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[09-03 18:30:57] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
+[09-03 20:46:52] Claude Code 2.1.251 (Claude Code) | Vault: D:\Staid\app\Obsidian\Ted_vault
+[09-03 20:46:52] [Stock] 使用 1 位已有会话用户作为日报接收人
+[09-03 20:46:52] [OK] Feishu Bot started, waiting for messages...
+[09-03 20:46:52] [Watchdog] 监控: D:\Staid\app\Obsidian\Ted_vault\多物理场仿真\每日蒸馏 | 目标用户: 0 | 已追踪 4 份旧报告
+[09-03 20:46:52] [Stock] 收盘报告时间 15:30 Asia/Shanghai | 目标用户: 1
